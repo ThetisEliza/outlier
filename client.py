@@ -17,7 +17,7 @@ def recvLoop():
 
 
 def main():
-    sk.connect(("127.0.0.1", 2702)) 
+    sk.connect(("43.142.129.32", 8809)) 
     recvThread = Thread(target=recvLoop)
     recvThread.start()
     while 1:  
