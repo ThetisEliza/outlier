@@ -15,29 +15,9 @@ PROJ_PATH = ""
 
 class Config:
     def __init__(self):
-        with open(PROJ_PATH+"config/config.json") as f:
-            print(f)
-            self.config = json.load(f)
-            print(self.config)
-
-
-class Encryptor:
-    ...
-    
- 
-'''
-The log tool. Maybe we need a customer log class or maybe not
-'''   
-class Logger:
-    ...
-    
-'''
-We can use this class to manage chat status, maybe release some unused channel,
-saving or loading chat history and something else.
-'''
-class ChatManager:
-    ...
-
+        self.config = json.load(PROJ_PATH+"config/config.json")        
+        print(self.config)
+        
 
 class CommManager:
     def __init__(self) -> None:
