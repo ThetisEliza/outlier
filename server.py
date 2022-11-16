@@ -16,7 +16,6 @@ class CommManager:
         self.connects = []
         self.msgQueue = Queue()    
         
-    
 cm = CommManager()   
 
 def commuLoop(conn):
@@ -33,12 +32,12 @@ def commuLoop(conn):
         
     errorTime = 0
     while 1:
-        if errorTime >= 3:
-            break
         try:
-            if (recv()): break
+            if recv() == -1 or erroTime >= 3: 
+                break
             errorTime = 0
         except:
+            sleep(1)
             print(f"Reconnecting .. {errorTime}")
             errorTime += 1
     print("connection closed")
@@ -59,11 +58,9 @@ def main():
     print('start.')
     sk = socket.socket()
     
-    sk.bind(("127.0.0.1", 2702))
+    sk.bind(("10.0.4.2", 8809))
     sk.listen()
 
-    
-    print(cm)
     threads = []
     Thread(target=sendLoop, args=()).start()
     while 1:
@@ -76,18 +73,7 @@ def main():
     
     print("end.")
     
-    
-# while 1:
-#     seng_msg = input(">>>:").strip()
-#     conn.send(seng_msg.encode("utf-8"))
-#     if seng_msg.upper() == "BYE":
-#         break
-    # recv_msg = conn.recv(1024)
-#     print("from client", recv_msg.decode('utf-8'))
-#     if recv_msg.decode('utf-8').upper() == "BYE":
-#         break
-# conn.close()
-# sk.close()
+
 
 if __name__ == '__main__':
     main()
