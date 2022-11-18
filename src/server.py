@@ -3,21 +3,43 @@ Date: 2022-11-16 16:49:18
 LastEditors: ThetisEliza wxf199601@gmail.com
 LastEditTime: 2022-11-16 19:36:06
 FilePath: /py-outlier/server.py
+
+I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
 '''
 
 import socket 
 import json
+import logging
 from threading import Thread
 from time import sleep
 from queue import Queue
+
 
 PROJ_PATH = ""
 
 class Config:
     def __init__(self):
-        self.config = json.load(PROJ_PATH+"config/config.json")        
-        print(self.config)
-        
+        with open(PROJ_PATH+"config/config.json") as f:
+            self.__dict__.update(json.load(f))
+
+
+'''
+The Encryptor algorithm. there might be a huge amout of mature algorithms, but 
+we still could consider a new method to encrypt the communication in case of
+any vulnerable situation
+'''
+class Encryptor:
+    ...
+    
+ 
+    
+'''
+We can use this class to manage chat status, maybe release some unused channel,
+saving or loading chat history and something else.
+'''
+class ChatManager:
+    ...
+
 
 class CommManager:
     def __init__(self) -> None:
@@ -82,10 +104,16 @@ def main():
     
     print("end.")
     
-
+def fn():
+    print('hello')
 
 if __name__ == '__main__':
     # main()
-    c = Config()
+    # 
+    FORMAT = '%(asctime)s %(clientip)-15s %(user)-8s %(message)s'
+    logging.basicConfig(format=FORMAT)
+    d = {'clientip': '192.168.0.1', 'user': 'fbloggs'}
+    logging.getLogger("server").warning("watch  out", extra=d)
+    
     
     
