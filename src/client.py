@@ -1,8 +1,8 @@
 '''
 Date: 2022-11-16 16:59:28
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2022-11-16 19:24:17
-FilePath: /py-outlier/client.py
+LastEditTime: 2022-11-18 17:52:50
+FilePath: /outlier/src/client.py
 '''
 import socket
 from queue import Queue
@@ -17,7 +17,7 @@ def recvLoop():
 
 
 def main():
-    sk.connect(("43.142.129.32", 8809)) 
+    sk.connect(("127.0.0.1", 8809)) 
     recvThread = Thread(target=recvLoop)
     recvThread.start()
     while 1:  
