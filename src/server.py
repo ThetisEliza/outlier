@@ -7,13 +7,13 @@ FilePath: /outlier/src/server.py
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
 '''
 
-from manager import Config, ServerManager
+from manager import Config, ServerListener
 
 
 conf = Config()
 
 def main():
-    sm = ServerManager(conf)
+    sm = ServerListener(conf)
     sm.start()
     
 
