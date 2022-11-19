@@ -95,39 +95,24 @@ We can use this class to manage chat status, maybe release some unused channel,
 saving or loading chat history and something else.
 '''
 class ChatManager:
-    def __init__(self) -> None:       
-        
+    def __init__(self) -> None:
         self.history    = []
         self.connects   = []
-        
-        
-        
-        # todo
-        # self.channels   = []
-        
-        
-        
     
-        
-        
-    def _broadcastLoop(self):
-        """
-        This is a loop to broad cast all connected client. May be we could differentiate
-        some channels later, and this should be move to a more abstractive channel class
-        """
-        ...
-        
-        
+    ...
 
-class ServerManager:
+'''
+I guess we should try a more specific pattern where an individual listener should
+be departed from server
+'''
+class ServerListener:
     def __init__(self, conf) -> None:
         self._conf   = conf
         self._sock   = socket.socket()
         self._stop   = False
         self._conns  = []
-        self.syncqueue  = Queue()
-        
-        
+        self._bc     = Broadcaster(self._conns)
+
     def start(self):
         self._listenLoop()
         
@@ -145,33 +130,39 @@ class ServerManager:
         self._sock.bind((self._conf.ip, self._conf.port))
         self._sock.listen()
         
-        broadthread = Thread(target=self._broadcastLoop)
-        broadthread.start()
-        
         while not self._stop:
             print("waiting for connection")
             conn, addr = self._sock.accept()
-            client = Client(conn, addr, self._putmsg, self._elimateconn)
-            self._conns.append(client)
-                        
-        broadthread.join()
-    
-    
-    def _putmsg(self, msg):
-        self.syncqueue.put(msg)
-            
+            self._conns.append(Client(conn, addr, self._bc._putmsg, self._elimateconn))
+
     def _elimateconn(self, client):
         if client in self._conns:
             self._conns.remove(client)
-    
-    
         
-    def _broadcastLoop(self):
+
+class Broadcaster:
+    def __init__(self, conns) -> None:
+        self._stop = False
+        self.syncqueue  = Queue()
+        self.broadthread = Thread(target=self._broadcastLoop, args=(conns,))
+        self.broadthread.start()
+        
+        
+    def _putmsg(self, msg):
+        self.syncqueue.put(msg)
+        
+        
+    def _broadcastLoop(self, conns):
+        """
+        This is a loop to broad cast all connected client. May be we could differentiate
+        some channels later, and this should be move to a more abstractive channel class
+        """
         while not self._stop:
-            while not self.syncqueue.empty():
-                msg = self.syncqueue.get()
-                for client in self._conns:
-                    client.send(msg)
+            while self.syncqueue.empty():
+                sleep(0.1)
+            msg = self.syncqueue.get()
+            for client in conns:
+                client.send(msg)
         
             
 
