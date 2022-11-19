@@ -36,18 +36,26 @@ class Encryptor:
     ...
      
 
-
+class Package:
+    def __init__(self, msg, _id):
+        self.msg = msg
+        self._id = _id
+        self._ts = timestamp()
     
-class Client:
+    
+        
+        
+    
+class ClientConn:
     def __init__(self, conn, addr, putmsgrecall, notifyrecalls) -> None:
         self._conn = conn
         self._connthread = Thread(target=self._connLoop, args=(putmsgrecall, notifyrecalls,))
         self._activate()
         
-        ...
     
     def _recv(self):
         data = self._conn.recv(1024)
+        print(f"recv message {data}")
         if data == b"":
             return (None, -1)
         elif data is None:
@@ -63,11 +71,17 @@ class Client:
         errortime = 0
         while True:
             try:
+                print(f"prepare to receive , errtime {errortime}")
+                if errortime > 3:
+                    break
                 res, status = self._recv()
-                if status == -1 or errortime > 3:
+                print(f"receiving finished res: {res} status: {status}")
+                if status == -1:
+                    print(f"remote conn closed: {self._conn}")
                     break
                 putmsgrecall(res)
-            except:
+            except Exception as e:
+                print(e)
                 sleep(1)
                 errortime += 1
                 
@@ -80,7 +94,6 @@ class Client:
         
         
     def _deactivate(self):
-        ...
         self._conn.close()
         
         
@@ -98,8 +111,8 @@ class ChatManager:
     def __init__(self) -> None:
         self.history    = []
         self.connects   = []
-    
-    ...
+
+
 
 '''
 I guess we should try a more specific pattern where an individual listener should
@@ -127,13 +140,14 @@ class ServerListener:
         """
         This is a listen loop for accept new connections
         """
+        print(f"start bind on {self._conf.ip}, {self._conf.port}")
         self._sock.bind((self._conf.ip, self._conf.port))
         self._sock.listen()
         
         while not self._stop:
             print("waiting for connection")
             conn, addr = self._sock.accept()
-            self._conns.append(Client(conn, addr, self._bc._putmsg, self._elimateconn))
+            self._conns.append(ClientConn(conn, addr, self._bc._putmsg, self._elimateconn))
 
     def _elimateconn(self, client):
         if client in self._conns:
