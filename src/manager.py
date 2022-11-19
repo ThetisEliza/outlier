@@ -38,13 +38,12 @@ class Encryptor:
 
 
     
-class Client:
+class ClientConn:
     def __init__(self, conn, addr, putmsgrecall, notifyrecalls) -> None:
         self._conn = conn
         self._connthread = Thread(target=self._connLoop, args=(putmsgrecall, notifyrecalls,))
         self._activate()
         
-        ...
     
     def _recv(self):
         data = self._conn.recv(1024)
@@ -63,7 +62,7 @@ class Client:
         errortime = 0
         while True:
             try:
-                res, status = self._recv()
+                res, status = self._recv(1024)
                 if status == -1 or errortime > 3:
                     break
                 putmsgrecall(res)
@@ -80,7 +79,6 @@ class Client:
         
         
     def _deactivate(self):
-        ...
         self._conn.close()
         
         
@@ -133,7 +131,7 @@ class ServerListener:
         while not self._stop:
             print("waiting for connection")
             conn, addr = self._sock.accept()
-            self._conns.append(Client(conn, addr, self._bc._putmsg, self._elimateconn))
+            self._conns.append(ClientConn(conn, addr, self._bc._putmsg, self._elimateconn))
 
     def _elimateconn(self, client):
         if client in self._conns:
