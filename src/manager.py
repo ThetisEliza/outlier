@@ -35,8 +35,9 @@ any vulnerable situation
 class Encryptor:
     ...
      
-
-
+    
+        
+        
     
 class ClientConn:
     def __init__(self, conn, addr, putmsgrecall, notifyrecalls) -> None:
@@ -47,6 +48,7 @@ class ClientConn:
     
     def _recv(self):
         data = self._conn.recv(1024)
+        print(f"recv message {data}")
         if data == b"":
             return (None, -1)
         elif data is None:
@@ -62,11 +64,17 @@ class ClientConn:
         errortime = 0
         while True:
             try:
-                res, status = self._recv(1024)
-                if status == -1 or errortime > 3:
+                print(f"prepare to receive , errtime {errortime}")
+                if errortime > 3:
+                    break
+                res, status = self._recv()
+                print(f"receiving finished res: {res} status: {status}")
+                if status == -1:
+                    print(f"remote conn closed: {self._conn}")
                     break
                 putmsgrecall(res)
-            except:
+            except Exception as e:
+                print(e)
                 sleep(1)
                 errortime += 1
                 
@@ -96,8 +104,8 @@ class ChatManager:
     def __init__(self) -> None:
         self.history    = []
         self.connects   = []
-    
-    ...
+
+
 
 '''
 I guess we should try a more specific pattern where an individual listener should
@@ -125,6 +133,7 @@ class ServerListener:
         """
         This is a listen loop for accept new connections
         """
+        print(f"start bind on {self._conf.ip}, {self._conf.port}")
         self._sock.bind((self._conf.ip, self._conf.port))
         self._sock.listen()
         
