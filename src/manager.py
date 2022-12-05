@@ -35,13 +35,6 @@ any vulnerable situation
 class Encryptor:
     ...
      
-
-class Package:
-    def __init__(self, msg, _id):
-        self.msg = msg
-        self._id = _id
-        self._ts = timestamp()
-    
     
         
         

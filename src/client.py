@@ -9,7 +9,7 @@ import json
 from queue import Queue
 from threading import Thread
 from manager import Config
-
+from protocol import Package, Command
 
 
 class ClientController:
@@ -22,9 +22,10 @@ class ClientController:
     
     # command
     
-    def __init__(self):
+    def __init__(self, sk):
         self._status = ClientController.CHAT
         self._func_map = {}
+        self._sk = sk
         
         self.__register_func(ClientController.CHAT, "$cmd", self.__handletocommand)
         self.__register_func(ClientController.CHAT, "$bg",  self.__handletobg)
@@ -67,7 +68,7 @@ class ClientController:
         
     # chat functions
     def __handlechat(self, inputinfo, *inputs):
-        print(f"send to server {inputinfo}")
+        self._sk.send(Package.buildpackage().add_field("msg", inputinfo).tobyteflow())
         self.activelysyncmessages()
         
     # command functions
@@ -93,29 +94,17 @@ class ClientController:
         
     
     # api functions
-    def activelysyncmessages(self):
-        sk = socket.socket()
-        sk.connect(("10.0.4.2", Config().port))
-        
-        data = {
-            "cmd": "sync",
-            "param": {}
-        }
-        a = json.dumps(data)
-        print(f"send msg {data}", data)
-        sk.send(json.dumps(data).encode("utf-8"))
-        recv_msg = sk.recv(1024).decode("utf-8")
-        print(recv_msg)
-                
-        sk.close()
-        print(f"socket closed")
+    def activelysyncmessages(self):        
+        package = Package.buildpackage().add_cmd(Command.FETCH)
+        print(f"send msg {package}")
+        self._sk.send(package.tobyteflow())
         
         
     def interact(self, inputinfo, *inputs):
         cmd_        = inputs[0]
         funcmap_    = self._func_map.get(self._status, {})
         func_       = funcmap_.get(cmd_, funcmap_.get("unk", self.__handleunknown))
-        print(f"check interact cmd {cmd_}, funcmap {funcmap_}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
+        print(f"check interact cmd {cmd_}, funcmap {funcmap_.keys()}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
         func_(inputinfo, *inputs)
         
 
@@ -123,22 +112,23 @@ class ClientController:
 class Client:
         
     def __init__(self, conf):
-        # self._sk = socket.socket()
-        # self._sk.connect((conf.ip, conf.port)) 
-        self.controller = ClientController()
+        self._sk = socket.socket()
+        self._sk.connect((conf.ip, conf.port)) 
+        self.controller = ClientController(self._sk)
         self._interactloop()
-        # recvThread = Thread(target=self._recvLoop)
-        # recvThread.start()
+        recvThread = Thread(target=self._recvLoop)
+        recvThread.start()
         # self._interactloop()
-        # recvThread.join()
-        
-        # self._sk.close()
+        recvThread.join()
+        self._sk.close()
         
 
-    # def _recvLoop(self):
-    #     while 1:
-    #         recv_msg = self._sk.recv(1024)
-    #         print("Message from the server:", recv_msg.decode("utf-8"))
+    def _recvLoop(self):
+        while 1:
+            recv_bytes = self._sk.recv(1024)
+            package = Package.parsebyteflow(recv_bytes)
+            print(f"recv msg {package}")
+            
             
     def _interactloop(self):
         while 1:  
@@ -150,7 +140,6 @@ class Client:
             if len(inputs):
                 self.controller.interact(inputinfo, *inputs)
         
-
 def main():
     conf = Config()
     Client(conf)
