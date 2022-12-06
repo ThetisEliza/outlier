@@ -6,13 +6,15 @@ FilePath: /outlier/src/client.py
 '''
 import socket
 import json
+import time
 from queue import Queue
 from threading import Thread
 from manager import Config
-from protocol import Package, Command
+from protocol import Package, Command, Message
 from argparse import ArgumentParser
 import sys
 import logging
+import re
 
 class ClientController:
     
@@ -70,8 +72,11 @@ class ClientController:
         
     # chat functions
     def __handlechat(self, inputinfo, *inputs):
-        self._sk.send(Package.buildpackage().add_field("msg", inputinfo).tobyteflow())
-        self.activelysyncmessages()
+        
+        self._sk.sendall(Package.buildpackage().add_field("msg", inputinfo).tobyteflow())
+        time.sleep(0.1)
+        self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).tobyteflow())
+        
         
     # command functions
     def __handlehistory(self, inputinfo, *inputs):
@@ -99,7 +104,7 @@ class ClientController:
     def activelysyncmessages(self):        
         package = Package.buildpackage().add_cmd(Command.FETCH)
         logging.debug(f"send msg {package}")
-        self._sk.send(package.tobyteflow())
+        
         
         
     def interact(self, inputinfo, *inputs):
@@ -109,33 +114,40 @@ class ClientController:
         logging.debug(f"check interact cmd {cmd_}, funcmap {funcmap_.keys()}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
         func_(inputinfo, *inputs)
         
-
+from typing import List
 
 class Client:
         
     def __init__(self, conf):
         self._sk = socket.socket()
         self._sk.connect((conf.ip, conf.port)) 
+        self._msgbuffer: List[Message] = []
         self.controller = ClientController(self._sk)
-        self._interactloop()
         recvThread = Thread(target=self._recvLoop)
         recvThread.start()
-        # self._interactloop()
+        self._interactloop()
         recvThread.join()
         self._sk.close()
         
 
     def _recvLoop(self):
         while 1:
+            logging.debug(f"prepare recv msg")
             recv_bytes = self._sk.recv(1024)
             package = Package.parsebyteflow(recv_bytes)
             logging.debug(f"recv msg {package}")
-            
+            if "sync" in package.get_data():
+                messagedata = package.get_data()["sync"]
+                for m in messagedata:
+                    message = Message.parse(m)
+                self._msgbuffer.append(message)
+                
+            for m in self._msgbuffer:
+                logging.info(f"message {m}")
             
     def _interactloop(self):
         while 1:  
             inputinfo = input().strip()
-            import re
             inputs = re.split("\\s+", inputinfo)
             inputs = list(filter(lambda x: len(x) != 0, inputs))
             logging.debug(f"check inputs {inputs} inputinfo {inputinfo}")
