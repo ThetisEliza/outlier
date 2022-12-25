@@ -26,10 +26,11 @@ class ClientController:
     
     # command
     
-    def __init__(self, sk):
+    def __init__(self, sk, username):
         self._status = ClientController.CHAT
         self._func_map = {}
         self._sk = sk
+        self._username = username
         
         self.__register_func(ClientController.CHAT, "$cmd", self.__handletocommand)
         self.__register_func(ClientController.CHAT, "$bg",  self.__handletobg)
@@ -73,9 +74,9 @@ class ClientController:
     # chat functions
     def __handlechat(self, inputinfo, *inputs):
         
-        self._sk.sendall(Package.buildpackage().add_field("msg", inputinfo).tobyteflow())
+        self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).add_field("msg", inputinfo).add_field("username", self._username).tobyteflow())
         time.sleep(0.1)
-        self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).tobyteflow())
+        # self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).tobyteflow())
         
         
     # command functions
@@ -122,7 +123,7 @@ class Client:
         self._sk = socket.socket()
         self._sk.connect((conf.ip, conf.port)) 
         self._msgbuffer: List[Message] = []
-        self.controller = ClientController(self._sk)
+        self.controller = ClientController(self._sk, conf.username)
         recvThread = Thread(target=self._recvLoop)
         recvThread.start()
         self._interactloop()
@@ -139,11 +140,12 @@ class Client:
             if "sync" in package.get_data():
                 messagedata = package.get_data()["sync"]
                 for m in messagedata:
-                    message = Message.parse(m)
+                    message = Message.parse(**m)
                 self._msgbuffer.append(message)
                 
             for m in self._msgbuffer:
                 logging.info(f"message {m}")
+            self._msgbuffer.clear()
             
     def _interactloop(self):
         while 1:  
@@ -159,10 +161,11 @@ FORMAT = '%(asctime)s - %(message)s'
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-n", "--name", required=True, type=str)
     args = argparse.parse_args()
-    conf = Config(**{"log": args.log})
     
-    
+    conf = Config(**{"log": args.log, "username": args.name})
+        
     logging.basicConfig(format=FORMAT, level=eval("logging."+conf.log.upper()))
     logging.debug(f"{sys._getframe()} start")
     

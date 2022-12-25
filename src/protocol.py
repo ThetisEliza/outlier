@@ -1,4 +1,5 @@
 import json
+import hashlib
 from datetime import datetime
 
 class Command:
@@ -30,14 +31,17 @@ class Message:
     def __repr__(self) -> str:
         return f"From:{self._sender} - {self._timestamp}: {self._msg}"
     
-    @classmethod
-    def parse(**data):
-        return Message(data["msg"], data["sender"], data["timestamp"])
-
-class Encrption:
+    def jsonallize(self):
+        return self.__dict__
     
+    @staticmethod
+    def parse(**data):
+        return Message(data["_msg"], data["_sender"], data["_timestamp"])
+
+
+class Encrption:    
     def entrypt(data:str, key=KEY) -> bytes:
-        hashcode = KEY.__hash__() % 128
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
         out = bytearray()
         for b in data.encode('ascii'):
             b ^= hashcode
@@ -46,7 +50,7 @@ class Encrption:
         return bytes(out)  
         
     def decrypt(data:bytes, key=KEY) -> str:
-        hashcode = KEY.__hash__() % 128
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
         out = bytearray()
         for b in data:
             pre_b = b

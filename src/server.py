@@ -13,6 +13,7 @@ import time
 from queue import Queue
 import sys
 import os
+from protocol import Message
 
 from manager import Config
 from protocol import Package        
@@ -45,12 +46,12 @@ class ClientConn:
                 if errortime > 3:
                     break
                 res, status = self._recv()
+                res = Package.parsebyteflow(res)
                 print(f"receiving finished res: {res} status: {status}")
-                print(f"receiving finished res: {Package.parsebyteflow(res)} status: {status}")
                 if status == -1:
                     print(f"remote conn closed: {self._conn}")
                     break
-                putmsgrecall(res)
+                putmsgrecall(Message(res.get_data().get("msg", ""), res.get_data().get("username"), res.get_data().get('timestamp')))
             except Exception as e:
                 print(e)
                 time.sleep(1)
@@ -146,13 +147,12 @@ class Broadcaster:
             while self.syncqueue.empty():
                 time.sleep(0.1)
                 
-            
             msg = self.syncqueue.get()
-            print(f"broadcast msg {msg}")
-            package = Package.parsebyteflow(msg)
+            print(f"broadcast msg {msg.jsonallize()}")
+            package = Package.buildpackage().add_field("sync", [msg.jsonallize()]).tobyteflow()
             print(f"broadcast msg {package}")
             for client in conns:
-                client.send(msg)
+                client.send(package)
         
             
 
