@@ -6,11 +6,15 @@ FilePath: /outlier/src/client.py
 '''
 import socket
 import json
+import time
 from queue import Queue
 from threading import Thread
 from manager import Config
-from protocol import Package, Command
-
+from protocol import Package, Command, Message
+from argparse import ArgumentParser
+import sys
+import logging
+import re
 
 class ClientController:
     
@@ -22,10 +26,11 @@ class ClientController:
     
     # command
     
-    def __init__(self, sk):
+    def __init__(self, sk, username):
         self._status = ClientController.CHAT
         self._func_map = {}
         self._sk = sk
+        self._username = username
         
         self.__register_func(ClientController.CHAT, "$cmd", self.__handletocommand)
         self.__register_func(ClientController.CHAT, "$bg",  self.__handletobg)
@@ -47,101 +52,123 @@ class ClientController:
     def __register_func(self, status, cmd, func):
         self._func_map.setdefault(status, {})
         self._func_map[status][cmd] = func
-        print(f"register func {status}, {cmd}, {func}") 
+        logging.debug(f"register func {status}, {cmd}, {func}") 
     
     # default handler
     def __handleunknown(self, inputinfo, *inputs):
-        print(f"input err")
+        logging.debug(f"input err")
         
     # status switch
     def __handletobg(self, inputinfo, *inputs):
-        print(f"to bg")
+        logging.debug(f"to bg")
         
     def __handletocommand(self, inputinfo, *inputs):
-        print(f"to cmd")
+        logging.debug(f"to cmd")
         self._status = ClientController.CMD
         
     def __handletochat(self, inputinfo, *inputs):
-        print(f"to chat")
+        logging.debug(f"to chat")
         self._status = ClientController.CHAT
         
         
     # chat functions
     def __handlechat(self, inputinfo, *inputs):
-        self._sk.send(Package.buildpackage().add_field("msg", inputinfo).tobyteflow())
-        self.activelysyncmessages()
+        
+        self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).add_field("msg", inputinfo).add_field("username", self._username).tobyteflow())
+        time.sleep(0.1)
+        # self._sk.sendall(Package.buildpackage().add_cmd(Command.FETCH).tobyteflow())
+        
         
     # command functions
     def __handlehistory(self, inputinfo, *inputs):
-        print(f"handle history")
+        logging.debug(f"handle history")
         
     def __handlesync(self, inputinfo, *inputs):
-        print(f"handle sycn")
+        logging.debug(f"handle sycn")
         
     def __handlefetchinfo(self, inputinfo, *inputs):
-        print(f"handle fetch info")
+        logging.debug(f"handle fetch info")
         
     def __handleexit(self, inputinfo, *inputs):
-        print(f"handle exit")
+        logging.debug(f"handle exit")
         
         
     # bg functions
     def __handlecheckstate(self, inputinfo, *inputs):
-        print(f"handle check state")
+        logging.debug(f"handle check state")
         
     def __handleback(self, inputinfo, *inputs):
-        print(f"handle back")
+        logging.debug(f"handle back")
         
     
     # api functions
     def activelysyncmessages(self):        
         package = Package.buildpackage().add_cmd(Command.FETCH)
-        print(f"send msg {package}")
-        self._sk.send(package.tobyteflow())
+        logging.debug(f"send msg {package}")
+        
         
         
     def interact(self, inputinfo, *inputs):
         cmd_        = inputs[0]
         funcmap_    = self._func_map.get(self._status, {})
         func_       = funcmap_.get(cmd_, funcmap_.get("unk", self.__handleunknown))
-        print(f"check interact cmd {cmd_}, funcmap {funcmap_.keys()}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
+        logging.debug(f"check interact cmd {cmd_}, funcmap {funcmap_.keys()}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
         func_(inputinfo, *inputs)
         
-
+from typing import List
 
 class Client:
         
     def __init__(self, conf):
         self._sk = socket.socket()
         self._sk.connect((conf.ip, conf.port)) 
-        self.controller = ClientController(self._sk)
-        self._interactloop()
+        self._msgbuffer: List[Message] = []
+        self.controller = ClientController(self._sk, conf.username)
         recvThread = Thread(target=self._recvLoop)
         recvThread.start()
-        # self._interactloop()
+        self._interactloop()
         recvThread.join()
         self._sk.close()
         
 
     def _recvLoop(self):
         while 1:
+            logging.debug(f"prepare recv msg")
             recv_bytes = self._sk.recv(1024)
             package = Package.parsebyteflow(recv_bytes)
-            print(f"recv msg {package}")
-            
+            logging.debug(f"recv msg {package}")
+            if "sync" in package.get_data():
+                messagedata = package.get_data()["sync"]
+                for m in messagedata:
+                    message = Message.parse(**m)
+                self._msgbuffer.append(message)
+                
+            for m in self._msgbuffer:
+                logging.info(f"message {m}")
+            self._msgbuffer.clear()
             
     def _interactloop(self):
         while 1:  
             inputinfo = input().strip()
-            import re
             inputs = re.split("\\s+", inputinfo)
             inputs = list(filter(lambda x: len(x) != 0, inputs))
-            print(f"check inputs {inputs} inputinfo {inputinfo}")
+            logging.debug(f"check inputs {inputs} inputinfo {inputinfo}")
             if len(inputs):
                 self.controller.interact(inputinfo, *inputs)
+                
+FORMAT = '%(asctime)s - %(message)s'
         
 def main():
-    conf = Config()
+    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
+    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-n", "--name", required=True, type=str)
+    args = argparse.parse_args()
+    
+    conf = Config(**{"log": args.log, "username": args.name})
+        
+    logging.basicConfig(format=FORMAT, level=eval("logging."+conf.log.upper()))
+    logging.debug(f"{sys._getframe()} start")
+    
     Client(conf)
     
     

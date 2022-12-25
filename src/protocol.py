@@ -1,4 +1,5 @@
 import json
+import hashlib
 from datetime import datetime
 
 class Command:
@@ -9,10 +10,38 @@ class Command:
 
 KEY = "asdqwezxc"
 
-class Encrption:
+class Message:
+    def __init__(self, msg:str, sender:str, timestamp:float) -> None:
+        self._msg = msg
+        self._sender = sender
+        self._timestamp = timestamp
     
+    @property
+    def msg(self):
+        return self._msg
+    
+    @property
+    def sender(self):
+        return self._sender
+    
+    @property
+    def timestamp(self):
+        return self._timestamp
+        
+    def __repr__(self) -> str:
+        return f"From:{self._sender} - {self._timestamp}: {self._msg}"
+    
+    def jsonallize(self):
+        return self.__dict__
+    
+    @staticmethod
+    def parse(**data):
+        return Message(data["_msg"], data["_sender"], data["_timestamp"])
+
+
+class Encrption:    
     def entrypt(data:str, key=KEY) -> bytes:
-        hashcode = KEY.__hash__() % 128
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
         out = bytearray()
         for b in data.encode('ascii'):
             b ^= hashcode
@@ -21,7 +50,7 @@ class Encrption:
         return bytes(out)  
         
     def decrypt(data:bytes, key=KEY) -> str:
-        hashcode = KEY.__hash__() % 128
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
         out = bytearray()
         for b in data:
             pre_b = b
@@ -44,8 +73,11 @@ class Package:
         return self
     
     def encrypt(self):
-        data = json.dumps(self.data)
-        self.byteflow = Encrption.entrypt(data)
+        try:
+            data = json.dumps(self.data)
+            self.byteflow = Encrption.entrypt(data)
+        except Exception as e:
+            ...
         return self
     
     def decrypt(self):
@@ -55,7 +87,6 @@ class Package:
         except Exception as e:
             self.byteflow = "err"
             self.data = {}
-            print(e)
         return self
     
     def get_byteflow(self) -> bytes:
@@ -81,3 +112,4 @@ class Package:
     @staticmethod
     def parsebyteflow(byteflow: bytes):
         return Package().set_byteflow(byteflow).decrypt()
+    
