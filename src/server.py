@@ -145,8 +145,7 @@ class Broadcaster:
         """
         while not self._stop:
             while self.syncqueue.empty():
-                time.sleep(0.1)
-                
+                time.sleep(0.1)                
             msg = self.syncqueue.get()
             print(f"broadcast msg {msg.jsonallize()}")
             package = Package.buildpackage().add_field("sync", [msg.jsonallize()]).tobyteflow()
