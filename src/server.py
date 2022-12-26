@@ -153,14 +153,7 @@ class Broadcaster:
             print(f"broadcast msg {package}")
             for client in conns:
                 client.send(package)
-        
             
-
-        
-        
-        
-    
-
 conf = Config()
 
 def main():
