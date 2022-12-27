@@ -21,3 +21,5 @@ XXX
 - add log system
 
 
+12.27
+- add active sync feature
