@@ -79,6 +79,7 @@ class Broadcaster:
         self.syncqueue  = Queue()
         self.allhistory: List[Message] = []
         self.broadthread = Thread(target=self._broadcastLoop, args=(conns,))
+        self.broadthread.setDaemon(True)
         self.broadthread.start()
         
         
@@ -90,10 +91,7 @@ class Broadcaster:
         
     def syncmsg(self, timestamp, name, conn):
         logging.info(f"syncmsg message {timestamp} {name}")
-        msgbuffer: List[Message] = []
-        for msg in self.allhistory:
-            if msg.timestamp > timestamp:
-                msgbuffer.append(msg)
+        msgbuffer: List[Message] = list(filter(lambda x:x.timestamp > timestamp, self.allhistory))
         flow = Package.buildpackage().add_field("sync", list(map(lambda x:x.jsonallize(), msgbuffer))).tobyteflow()
         conn.send(flow)
         
@@ -107,7 +105,7 @@ class Broadcaster:
             while self.syncqueue.empty():
                 time.sleep(0.1)                
             msg = self.syncqueue.get()
-            flow = Package.buildpackage().add_field("sync", [msg.jsonallize()]).tobyteflow()
+            flow = Package.buildpackage().add_field(Command.SYNC_RET, [msg.jsonallize()]).tobyteflow()
             for client in conns:
                 client.send(flow)
 
@@ -116,7 +114,8 @@ class ClientConn:
     def __init__(self, conn, addr, broadcaster:Broadcaster) -> None:
         self._conn = conn
         self._broadcaster = broadcaster
-        self._connthread = Thread(target=self._connLoop, args=(self._broadcaster,))
+        self._connthread = Thread(target=self._connLoop)
+        self._connthread.setDaemon(True)
         self._activate()
         
     
@@ -131,7 +130,7 @@ class ClientConn:
             return data, 0
         
         
-    def _connLoop(self, broadcaster: Broadcaster):
+    def _connLoop(self):
         """
         This is the loop for client to maintain the connection.
         """
@@ -141,25 +140,13 @@ class ClientConn:
                 logging.info(f"prepare to receive , time {errortime}")
                 if errortime > 3:
                     break
-                res, status = self._recv()
-                res = Package.parsebyteflow(res)
-                logging.info(f"receiving finished res: {res} status: {status}")
-                if status == -1:
-                    logging.info(f"remote conn closed: {self._conn}")
-                    break
-                
-                if "msg" in res.get_data():
-                    broadcaster.putmsg(Message(res.get_data().get("msg", ""), res.get_data().get("username"), res.get_data().get('timestamp')))
-                
-                elif "cmd" in res.get_data() and res.get_data().get('cmd', "") == Command.SYNC:
-                    broadcaster.syncmsg(res.get_data().get('timestamp'), res.get_data().get('username'), self._conn)
-                
-                    
+                if self.process_package(*self._recv()) == -1:
+                    break   
+                errortime = 0                 
             except Exception as e:
                 logging.warning(e)
                 time.sleep(1)
-                errortime += 1
-                
+                errortime += 1                
         self._deactivate()
             
 
@@ -173,7 +160,34 @@ class ClientConn:
         
         
     def send(self, msg):
-        self._conn.send(msg)   
+        self._conn.send(msg)
+        
+        
+    def process_package(self, package, status):
+        logging.info(f"receiving finished package: {package} status: {status}")
+        
+        package = Package.parsebyteflow(package)
+        
+        if status == -1:
+            logging.info(f"remote conn closed: {self._conn}")
+            return -1
+        
+        if "msg" in package.get_data():
+            self._broadcaster.putmsg(Message(package.get_data().get("msg", ""), package.get_data().get("username"), package.get_data().get('timestamp')))
+        
+        elif "cmd" in package.get_data():
+            if package.get_data().get('cmd', "") == Command.SYNC:
+                self._broadcaster.syncmsg(package.get_data().get('timestamp'), package.get_data().get('username'), self._conn)
+                ...
+            elif package.get_data().get('cmd', "") == Command.INFO:
+                # send current info
+                ...
+            elif package.get_data().get('cmd', "") == Command.DS:
+                # send disconnect
+                ...
+            elif package.get_data().get('cmd', "") == Command.FETCH:
+                # send fetch
+                ...
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")

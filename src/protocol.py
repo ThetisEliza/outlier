@@ -7,6 +7,13 @@ class Command:
     SYNC  = "sync"
     DS    = "disconnect"
     INFO  = "info"
+    
+    RET   = "_ret"
+    
+    FETCH_RET   = FETCH + RET
+    SYNC_RET    = SYNC + RET
+    DS_RET      = DS + RET
+    INFO_RET    = INFO + RET
 
 
 KEY = "asdqwezxc"

@@ -29,7 +29,8 @@ class ClientController:
     # command
     
     def __init__(self, sk, username, client):
-        self._status = ClientController.CHAT
+        # self._status = ClientController.CHAT
+        self._status = ClientController.CMD
         self._func_map = {}
         self._sk = sk
         self._username = username
@@ -77,6 +78,8 @@ class ClientController:
         
     def __handletochat(self, inputinfo, *inputs):
         logging.debug(f"to chat")
+        
+        logging.info(f"return to chat")
         self._status = ClientController.CHAT
         self._client.showbufferedmsg()
         
@@ -153,7 +156,7 @@ class Client:
         
     def showbufferedmsg(self):
         for m in self._msgbuffer:
-            print(f"message {m}")
+            logging.info(f"message {m}")
         self._msgbuffer.clear()  
         
     def _recvLoop(self):
@@ -163,12 +166,15 @@ class Client:
             package = Package.parsebyteflow(recv_bytes)
             logging.debug(f"recv msg {package}")
             
-            if "sync" in package.get_data():
+            if Command.SYNC_RET in package.get_data():
                 self.lastsync = datetime.timestamp(datetime.now())
-                messagedata = package.get_data()["sync"]
+                messagedata = package.get_data()[Command.SYNC_RET]
                 for m in messagedata:
                     message = Message.parse(**m)
                     self._msgbuffer.append(message)
+            
+            
+            
             
             if self.controller._status == ClientController.CHAT:
                 self.showbufferedmsg()
