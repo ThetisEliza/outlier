@@ -47,8 +47,10 @@ class ClientController:
         # self.__register_func(ClientController.CMD,  "$bg",    self.__handletobg)
         self.__register_func(ClientController.CMD,  "history",  self.__handlehistory)
         self.__register_func(ClientController.CMD,  "sync",  self.__handlesync)
+        self.__register_func(ClientController.CMD,  "room",  self.__handleroom)
         self.__register_func(ClientController.CMD,  "info",  self.__handlefetchinfo)
         self.__register_func(ClientController.CMD,  "exit",  self.__handleexit)
+        self.__register_func(ClientController.CMD,  "reconnect",  self.__handlereconnect)
         
         # self.__register_func(ClientController.BG,  "$chat",  self.__handletochat)
         # self.__register_func(ClientController.BG,  "$cmd",   self.__handletobg)
@@ -79,7 +81,7 @@ class ClientController:
     def __handletochat(self, inputinfo, *inputs):
         logging.debug(f"to chat")
         
-        logging.info(f"return to chat")
+        logging.info(f"start chat")
         self._status = ClientController.CHAT
         self._client.showbufferedmsg()
         
@@ -105,6 +107,7 @@ class ClientController:
         
     def __handlefetchinfo(self, inputinfo, *inputs):
         logging.debug(f"handle fetch info")
+        self._sk.send(Package.buildpackage().add_cmd(Command.INFO).add_field("username", self._username).tobyteflow())
         
     # # bg functions
     # def __handlecheckstate(self, inputinfo, *inputs):
@@ -112,7 +115,19 @@ class ClientController:
         
     # def __handleback(self, inputinfo, *inputs):
     #     logging.debug(f"handle back")
+    
+    def __handleroom(self, inputinfo, *inputs):
+        logging.debug(f"handle room")
+        if len(inputs) > 1:
+            roomname = inputs[1]
+            self._sk.send(Package.buildpackage().add_cmd(Command.ROOM).add_field("username", self._username).add_field("roomname", roomname).tobyteflow())
+        else:
+            self._sk.send(Package.buildpackage().add_cmd(Command.ROOM).add_field("username", self._username).tobyteflow())
+        time.sleep(0.1)
         
+    def __handlereconnect(self, inputinfo, *inputs):
+        logging.debug(f"handle reconnect")
+        self._client.reconnect()
         
     def __handleexit(self, inputinfo, *inputs):
         logging.debug(f"handle exit")
@@ -137,8 +152,9 @@ class ClientController:
 class Client:
         
     def __init__(self, conf):
+        self._conf = conf
         self._sk = socket.socket()
-        self._sk.connect((conf.ip, conf.port))
+        self._sk.connect((self._conf.ip, self._conf.port))
         self._msgbuffer: List[Message] = []
         self.controller = ClientController(self._sk, conf.username, self)
         self._loopflag = True
@@ -148,38 +164,73 @@ class Client:
         self.recvThread.start()
         self.controller.activelysyncmessages()
         self._interactloop()
-        
+    
+    def reconnect(self):
+        logging.info("preparing reconnect")
+        self._sk = socket.socket()
+        self._sk.connect((self._conf.ip, self._conf.port))
+        self.recvThread = Thread(target=self._recvLoop)
+        self.recvThread.setDaemon(True)
+        self.recvThread.start()
         
     def close(self):        
-        self._loopflag = False
-        self._sk.close()
+        self._sk.shutdown()
         
     def showbufferedmsg(self):
         for m in self._msgbuffer:
             logging.info(f"message {m}")
         self._msgbuffer.clear()  
         
+    def _recv(self):
+        data = self._sk.recv(1024)
+        if data == b"":
+            return None, -1
+        elif data is None:
+            return None, -2
+        else:
+            return data, 0
+        
     def _recvLoop(self):
+        errortime = 0
         while self._loopflag:
-            logging.debug(f"prepare recv msg")
-            recv_bytes = self._sk.recv(1024)
-            package = Package.parsebyteflow(recv_bytes)
-            logging.debug(f"recv msg {package}")
+            recv_bytes, status = self._recv()
             
-            if Command.SYNC_RET in package.get_data():
-                self.lastsync = datetime.timestamp(datetime.now())
-                messagedata = package.get_data()[Command.SYNC_RET]
-                for m in messagedata:
-                    message = Message.parse(**m)
-                    self._msgbuffer.append(message)
+            if status < 0:
+                errortime += 1
+                
+            if errortime > 3:
+                break
             
+            try:
             
-            
-            
-            if self.controller._status == ClientController.CHAT:
-                self.showbufferedmsg()
+                package = Package.parsebyteflow(recv_bytes)
+                logging.debug(f"recv msg {package.get_data()}")
+                
+                if Command.SYNC_RET in package.get_data():
+                    self.lastsync = datetime.timestamp(datetime.now())
+                    messagedata = package.get_data()[Command.SYNC_RET]
+                    for m in messagedata:
+                        message = Message.parse(**m)
+                        self._msgbuffer.append(message)
+                
+                if Command.INFO_RET in package.get_data():
+                    messagedata = package.get_data()[Command.INFO_RET]
+                    print(messagedata)
+                    
+                if Command.ROOM_RET in package.get_data():
+                    msg = package.get_data()[Command.ROOM_RET]
+                    if msg == "enter":
+                        logging.info("entered room")
+                        self.controller.interact("$chat", "$chat")
                 
                 
+                if self.controller._status == ClientController.CHAT:
+                    self.showbufferedmsg()
+            
+            except Exception as e:
+                logging.warning(e)
+                errortime += 1
+        self.close()
             
     def _interactloop(self):
         while self._loopflag:

@@ -7,6 +7,7 @@ class Command:
     SYNC  = "sync"
     DS    = "disconnect"
     INFO  = "info"
+    ROOM  = "room"
     
     RET   = "_ret"
     
@@ -14,6 +15,7 @@ class Command:
     SYNC_RET    = SYNC + RET
     DS_RET      = DS + RET
     INFO_RET    = INFO + RET
+    ROOM_RET    = ROOM + RET
 
 
 KEY = "asdqwezxc"

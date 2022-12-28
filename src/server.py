@@ -15,23 +15,109 @@ from queue import Queue
 from argparse import ArgumentParser
 from typing import List
 
+import traceback
 
 from manager import Config
 from protocol import Package, Command, Message
 
 import utils
 
+
+'''
+Chat room
+'''
+class ChatRoom:
+    def __init__(self, name) -> None:
+        self.history    = []
+        self.connects   = []
+        self._bc        = Broadcaster(self.connects)
+        self._passwd    = None
+        self._name      = str(name)
+    
+    @staticmethod
+    def create(conn, name=None, passwd=None):
+        cm = ChatRoom(name)
+        cm._passwd = passwd
+        cm.enterconn(conn)
+        return cm
+    
+    def enterconn(self, conn):
+        self.connects.append(conn)
+        conn._chatroom = self
+    
+    def leaveconn(self, conn):
+        if conn in self.connects:
+            self.connects.remove(conn)
+            conn._chatroom = None
+        
+    def __repr__(self) -> str:
+        l = ("PSWD" if self._passwd else "FREE")
+        return f"{'room:'+str(self._name):10}\t{l}\t{len(self.connects)}\t{len(self.history)}"
+    
+    @staticmethod
+    def header():
+        return f"{'name':10}\t{'LOCK'}\tpeople\tmsg"
+        
+
 '''
 We can use this class to manage chat status, maybe release some unused channel,
 saving or loading chat history and something else.
 '''
-class ChatManager:
+class Manager:
+    instance = None
+    
     def __init__(self) -> None:
-        self.history    = []
-        self.connects   = []
+        self.allconnects: List[ClientConn]          = []
+        self.rooms      : List[ChatRoom]            = []
+    
+    
+    @staticmethod
+    def getinstance():
+        if Manager.instance is None:
+            Manager.instance = Manager()
+        return Manager.instance
+    
+    @staticmethod
+    def getinstanceTest():
+        if Manager.instance is None:
+            Manager.instance = Manager()
+            Manager.instance.rooms.append(ChatRoom(1))
+            Manager.instance.rooms.append(ChatRoom(2))
+            Manager.instance.rooms.append(ChatRoom(3))
+        return Manager.instance
+    
+    def getroom(self, name) -> ChatRoom:
+        for room in self.rooms:
+            if room._name == name:
+                return room
+        return  None
+    
+    def getatroom(self, conn):
+        return conn._chatroom
+        
+    def getconnects(self, room: ChatRoom):
+        return list(filter(lambda x: x._chatroom == room, self.allconnects))   
+    
+    def newconn(self, conn):
+        self.allconnects.append(conn)
+        
+    def newroom(self, room):
+        self.rooms.append(room)
+        
+    def disconn(self, conn):
+        if conn in self.allconnects:
+            self.allconnects.remove(conn)
+        atroom = self.getatroom(conn)
+        if atroom is not None:
+            atroom.leaveconn(conn)
 
-
-
+    def getinfo(self):
+        ret = ""
+        ret += ChatRoom.header() + "\n"
+        for room in self.rooms:
+            ret += room.__repr__() + "\n"
+        return ret
+        
 '''
 I guess we should try a more specific pattern where an individual listener should
 be departed from server
@@ -41,8 +127,8 @@ class ServerListener:
         self._conf   = conf
         self._sock   = socket.socket()
         self._stop   = False
-        self._conns  = []
-        self._bc     = Broadcaster(self._conns)
+        self._manager = Manager.getinstanceTest()
+        
 
     def start(self):
         self._listenLoop()
@@ -66,11 +152,9 @@ class ServerListener:
         while not self._stop:
             logging.info("waiting for connection")
             conn, addr = self._sock.accept()
-            self._conns.append(ClientConn(conn, addr, self._bc))
+            clientconn = ClientConn(conn, addr)
+            self._manager.newconn(clientconn)
 
-    def _elimateconn(self, client):
-        if client in self._conns:
-            self._conns.remove(client)
         
 
 class Broadcaster:
@@ -106,17 +190,18 @@ class Broadcaster:
                 time.sleep(0.1)                
             msg = self.syncqueue.get()
             flow = Package.buildpackage().add_field(Command.SYNC_RET, [msg.jsonallize()]).tobyteflow()
+            logging.debug(f"check broadcasting client {conns}")
             for client in conns:
                 client.send(flow)
 
 
 class ClientConn:
-    def __init__(self, conn, addr, broadcaster:Broadcaster) -> None:
+    def __init__(self, conn, addr) -> None:
         self._conn = conn
-        self._broadcaster = broadcaster
         self._connthread = Thread(target=self._connLoop)
         self._connthread.setDaemon(True)
         self._activate()
+        self._chatroom: ChatRoom = None
         
     
     def _recv(self):
@@ -144,6 +229,7 @@ class ClientConn:
                     break   
                 errortime = 0                 
             except Exception as e:
+                traceback.print_exc()
                 logging.warning(e)
                 time.sleep(1)
                 errortime += 1                
@@ -156,6 +242,7 @@ class ClientConn:
         
     def _deactivate(self):
         self._conn.close()
+        Manager.getinstance().disconn(self)
         
         
         
@@ -165,22 +252,24 @@ class ClientConn:
         
     def process_package(self, package, status):
         logging.info(f"receiving finished package: {package} status: {status}")
-        
         package = Package.parsebyteflow(package)
+        logging.debug(f"receiving finished package: {package}")
         
         if status == -1:
             logging.info(f"remote conn closed: {self._conn}")
             return -1
         
         if "msg" in package.get_data():
-            self._broadcaster.putmsg(Message(package.get_data().get("msg", ""), package.get_data().get("username"), package.get_data().get('timestamp')))
+            self._chatroom._bc.putmsg(Message(package.get_data().get("msg", ""), package.get_data().get("username"), package.get_data().get('timestamp')))
         
         elif "cmd" in package.get_data():
             if package.get_data().get('cmd', "") == Command.SYNC:
-                self._broadcaster.syncmsg(package.get_data().get('timestamp'), package.get_data().get('username'), self._conn)
+                self._chatroom._bc.syncmsg(package.get_data().get('timestamp'), package.get_data().get('username'), self._conn)
                 ...
             elif package.get_data().get('cmd', "") == Command.INFO:
                 # send current info
+                logging.info("Check get info")
+                self.send(Package.buildpackage().add_field(Command.INFO_RET, Manager.getinstance().getinfo()).tobyteflow())
                 ...
             elif package.get_data().get('cmd', "") == Command.DS:
                 # send disconnect
@@ -188,13 +277,33 @@ class ClientConn:
             elif package.get_data().get('cmd', "") == Command.FETCH:
                 # send fetch
                 ...
+            elif package.get_data().get('cmd', "") == Command.ROOM:
+                # send room
+                
+                if 'roomname' in package.get_data():
+                    username = package.get_data().get('username')
+                    roomname = package.get_data().get('roomname')
+                    room = Manager.getinstance().getroom(roomname)
+                    if room is None:
+                        self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self, username))
+                        logging.info(f"Created a room: {username}")    
+                        self.send(Package.buildpackage().add_field(Command.ROOM_RET, "err").tobyteflow())
+                    else:
+                        room.enterconn(self)
+                        logging.info(f"Enter the room: {room._name}")    
+                        self.send(Package.buildpackage().add_field(Command.ROOM_RET, "enter").tobyteflow())
+                else:
+                    self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
+                    logging.info("Created a room")
+                    self.send(Package.buildpackage().add_field(Command.ROOM_RET, "new").tobyteflow())
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-lh", "--loghandler", default=None, type=str)
     args = argparse.parse_args()
-    conf = Config(**{"log": args.log})
-    utils.init_logger(conf.log, filehandlename="log/app")
+    conf = Config(**{"log": args.log, "loghandler": args.loghandler})
+    utils.init_logger(conf.log, filehandlename=conf.loghandler)
     
     sm = ServerListener(conf)
     sm.start()

@@ -23,4 +23,7 @@ XXX
 
 12.27
 - add active sync feature
-- add rotatating log
+- add rotatating
+
+12.28
+- I found something really bothering, with the project getting larger, the cost of designing increases exponentially
