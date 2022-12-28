@@ -21,10 +21,6 @@ from protocol import Package, Command, Message
 
 import utils
 
-
-    
-
-
 '''
 We can use this class to manage chat status, maybe release some unused channel,
 saving or loading chat history and something else.
@@ -63,7 +59,7 @@ class ServerListener:
         This is a listen loop for accept new connections
         """
         logging.info(f"start bind on {self._conf.ip}, {self._conf.port}")
-        
+        self._sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         self._sock.bind((self._conf.ip, self._conf.port))
         self._sock.listen()
         
@@ -155,7 +151,7 @@ class ClientConn:
                 if "msg" in res.get_data():
                     broadcaster.putmsg(Message(res.get_data().get("msg", ""), res.get_data().get("username"), res.get_data().get('timestamp')))
                 
-                elif "cmd" in res.get_data() and res.get_data().get('cmd', "") == Command.FETCH:
+                elif "cmd" in res.get_data() and res.get_data().get('cmd', "") == Command.SYNC:
                     broadcaster.syncmsg(res.get_data().get('timestamp'), res.get_data().get('username'), self._conn)
                 
                     
@@ -184,7 +180,7 @@ def main():
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
     args = argparse.parse_args()
     conf = Config(**{"log": args.log})
-    utils.init_logger(conf.log)
+    utils.init_logger(conf.log, filehandlename="log/app")
     
     sm = ServerListener(conf)
     sm.start()

@@ -37,21 +37,22 @@ class ClientController:
         
         
         self.__register_func(ClientController.CHAT, "$cmd", self.__handletocommand)
-        self.__register_func(ClientController.CHAT, "$bg",  self.__handletobg)
+        # self.__register_func(ClientController.CHAT, "$bg",  self.__handletobg)
         self.__register_func(ClientController.CHAT, "$exit",  self.__handleexit)
+        self.__register_func(ClientController.CHAT, "$chat",  self.__handlenonswitch)
         self.__register_func(ClientController.CHAT, "unk",  self.__handlechat)
         
         self.__register_func(ClientController.CMD,  "$chat",  self.__handletochat)
-        self.__register_func(ClientController.CMD,  "$bg",    self.__handletobg)
+        # self.__register_func(ClientController.CMD,  "$bg",    self.__handletobg)
         self.__register_func(ClientController.CMD,  "history",  self.__handlehistory)
         self.__register_func(ClientController.CMD,  "sync",  self.__handlesync)
         self.__register_func(ClientController.CMD,  "info",  self.__handlefetchinfo)
         self.__register_func(ClientController.CMD,  "exit",  self.__handleexit)
         
-        self.__register_func(ClientController.BG,  "$chat",  self.__handletochat)
-        self.__register_func(ClientController.BG,  "$cmd",   self.__handletobg)
-        self.__register_func(ClientController.BG,  "state",  self.__handlecheckstate)
-        self.__register_func(ClientController.BG,  "back",   self.__handleback)
+        # self.__register_func(ClientController.BG,  "$chat",  self.__handletochat)
+        # self.__register_func(ClientController.BG,  "$cmd",   self.__handletobg)
+        # self.__register_func(ClientController.BG,  "state",  self.__handlecheckstate)
+        # self.__register_func(ClientController.BG,  "back",   self.__handleback)
         
         
         
@@ -66,8 +67,9 @@ class ClientController:
         logging.debug(f"input err")
         
     # status switch
-    def __handletobg(self, inputinfo, *inputs):
-        logging.debug(f"to bg")
+    # def __handletobg(self, inputinfo, *inputs):
+    #     logging.debug(f"to bg")
+    #     self._status = ClientController.BG
         
     def __handletocommand(self, inputinfo, *inputs):
         logging.debug(f"to cmd")
@@ -76,6 +78,12 @@ class ClientController:
     def __handletochat(self, inputinfo, *inputs):
         logging.debug(f"to chat")
         self._status = ClientController.CHAT
+        self._client.showbufferedmsg()
+        
+        
+    def __handlenonswitch(self, inputinfo, *inputs):
+        logging.debug(f"already at state {inputinfo}")
+        
         
         
     # chat functions
@@ -95,12 +103,12 @@ class ClientController:
     def __handlefetchinfo(self, inputinfo, *inputs):
         logging.debug(f"handle fetch info")
         
-    # bg functions
-    def __handlecheckstate(self, inputinfo, *inputs):
-        logging.debug(f"handle check state")
+    # # bg functions
+    # def __handlecheckstate(self, inputinfo, *inputs):
+    #     logging.debug(f"handle check state")
         
-    def __handleback(self, inputinfo, *inputs):
-        logging.debug(f"handle back")
+    # def __handleback(self, inputinfo, *inputs):
+    #     logging.debug(f"handle back")
         
         
     def __handleexit(self, inputinfo, *inputs):
@@ -143,24 +151,29 @@ class Client:
         self._loopflag = False
         self._sk.close()
         
-
+    def showbufferedmsg(self):
+        for m in self._msgbuffer:
+            print(f"message {m}")
+        self._msgbuffer.clear()  
+        
     def _recvLoop(self):
         while self._loopflag:
             logging.debug(f"prepare recv msg")
             recv_bytes = self._sk.recv(1024)
             package = Package.parsebyteflow(recv_bytes)
             logging.debug(f"recv msg {package}")
+            
             if "sync" in package.get_data():
                 self.lastsync = datetime.timestamp(datetime.now())
                 messagedata = package.get_data()["sync"]
                 for m in messagedata:
                     message = Message.parse(**m)
                     self._msgbuffer.append(message)
-                
-            for m in self._msgbuffer:
-                logging.info(f"message {m}")
-            self._msgbuffer.clear()
             
+            if self.controller._status == ClientController.CHAT:
+                self.showbufferedmsg()
+                
+                
             
     def _interactloop(self):
         while self._loopflag:
@@ -181,8 +194,6 @@ def main():
     conf = Config(**{"log": args.log, "username": args.name})
         
     utils.init_logger(conf.log.upper())
-    
-    logging.debug(f"{sys._getframe()} start")
     
     Client(conf)
     

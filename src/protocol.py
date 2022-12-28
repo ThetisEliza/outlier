@@ -6,9 +6,26 @@ class Command:
     FETCH = "fetch"
     SYNC  = "sync"
     DS    = "disconnect"
+    INFO  = "info"
 
 
 KEY = "asdqwezxc"
+
+def get_round_time(timestamp):
+    curr = datetime.now()
+    happening = datetime.fromtimestamp(timestamp)
+    delta = curr - happening
+    if (delta.days > 0):
+        return f"{delta.days} days ago"
+    elif delta.seconds // 3600 > 0:
+        return f"{delta.seconds // 3600} hours ago"
+    elif delta.seconds // 60 > 0:
+        return f"{delta.seconds // 60} minutes ago"
+    else:
+        return "just now"
+    
+    
+    
 
 class Message:
     def __init__(self, msg:str, sender:str, timestamp:float) -> None:
@@ -29,7 +46,7 @@ class Message:
         return self._timestamp
         
     def __repr__(self) -> str:
-        return f"From:{self._sender} - {self._timestamp}: {self._msg}"
+        return f"From:{self._sender:10} - {get_round_time(self._timestamp):20}: {self._msg}"
     
     def jsonallize(self):
         return self.__dict__
