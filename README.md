@@ -23,3 +23,4 @@ XXX
 
 12.27
 - add active sync feature
+- add rotatating log
