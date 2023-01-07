@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:59:28
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-06 16:01:32
+LastEditTime: 2023-01-07 22:30:33
 FilePath: /outlier/src/client.py
 '''
 import socket
@@ -154,7 +154,7 @@ class ClientController:
         
         # func_(inputinfo, *inputs)
         
-        from func import ClientFuncMap
+        from regdecorator import ClientFuncMap
         func = ClientFuncMap.get(cmd_+"@"+self._status)
         logging.debug(f"check interact cmd {cmd_}, func_ {func}, inputinfo {inputinfo}, inputs {inputs}")
         func.clientaction(self, inputinfo=inputinfo, sendarg=inputs)
@@ -220,7 +220,7 @@ class Client:
                 break
             
             try:
-                from func import ClientRecallMap
+                from regdecorator import ClientRecallMap
                 package = Package.parsebyteflow(recv_bytes)
                 ret_cmd = package.get_data().get("cmd")
                 ret_msg = package.get_data().get(ret_cmd)

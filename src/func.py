@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-03 14:58:05
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-07 20:33:35
+LastEditTime: 2023-01-07 22:29:43
 FilePath: /outlier/src/func.py
 '''
 
@@ -11,8 +11,6 @@ Functions Frame
 import time
 
 from protocol import Package
-from client import Client
-from server import ClientConn, Manager
 
 def nop(*args):
     print("nop snap")
@@ -74,8 +72,8 @@ class FuncBase:
     def serveraction(self, conn, bc = None, **kwargs):
         
         servereffectaction = self._kwargs.get("servereffectaction", nop)
+        print(servereffectaction)
         responsearg, bcarg = servereffectaction(conn, **kwargs)
-        print(responsearg)
         
         # server response
         package = Package.buildpackage() \
@@ -96,41 +94,18 @@ class FuncBase:
         
     
     def __repr__(self) -> str:
-        return f"FuncBase:{self._cmd}"
+        return f"FuncBase:{self._cmd}, kwargs:{self._kwargs}"
 
 
-INFO = FuncBase("info", State.Hall, True, localrecall=Client.showretmsg, servereffectaction=ClientConn.giveinfo)
-ROOM = FuncBase("room", State.Hall, True, localrecall=Client.showretmsg, servereffectaction=ClientConn.changeroom)
+# INFO = FuncBase("info", State.Hall, True, localrecall=Client.showretmsg, servereffectaction=ClientConn.giveinfo)
 
 
-FuncConfig = [ INFO, ROOM ]
-
-ClientFuncMap = {
-    func._statusname: func for func in FuncConfig
-}
-
-ClientRecallMap = {
-    func._retname : func for func in FuncConfig
-}
-
-ServerFuncMap = {
-    func._cmd : func for func in FuncConfig
-}
 
 
-print(FuncConfig)
-print(ClientFuncMap)
-print(ClientRecallMap)
-print(ServerFuncMap)
 
-def bizServerReg(funname, **kwargs):
-    def decorate(fn):
-        print("decorate", funname, kwargs)
-        return fn
-    return decorate
-
-class A:
-    @bizServerReg("info")
-    def b(self):
-        print("b")
+# class A:
+#     @bizServerReg(INFO)
+#     def b(self, **kwargs):
+#         print("b kw", kwargs, "b owner", self)
    
+# A.b(A(), a=1)

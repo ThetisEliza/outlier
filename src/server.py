@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-06 17:45:46
+LastEditTime: 2023-01-07 22:03:15
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -19,6 +19,7 @@ import traceback
 
 from manager import Config
 from protocol import Package, Command, Message
+from regdecorator import bizServerReg, ClassReg, INFO
 
 import utils
 
@@ -195,6 +196,7 @@ class Broadcaster:
                 client.send(flow)
 
 
+@ClassReg
 class ClientConn:
     def __init__(self, conn, addr) -> None:
         self._conn = conn
@@ -260,7 +262,7 @@ class ClientConn:
             return -1
         
         
-        from func import ServerFuncMap
+        from regdecorator import ServerFuncMap
         command = package.get_data().get('cmd', "")
         func = ServerFuncMap.get(command)
         
@@ -276,6 +278,9 @@ class ClientConn:
     
     # Biz Segment
     
+    
+    
+    @bizServerReg(INFO)
     def giveinfo(self, **kwargs):
         return Manager.getinstanceTest().getinfo(), None
     
