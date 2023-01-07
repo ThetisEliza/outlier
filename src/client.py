@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:59:28
-LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2022-11-18 17:52:50
+LastEditors: Xiaofei wxf199601@gmail.com
+LastEditTime: 2023-01-06 16:01:32
 FilePath: /outlier/src/client.py
 '''
 import socket
@@ -18,6 +18,7 @@ from argparse import ArgumentParser
 from typing import List
 import utils
 
+
 class ClientController:
     
     # status
@@ -30,7 +31,8 @@ class ClientController:
     
     def __init__(self, sk, username, client):
         # self._status = ClientController.CHAT
-        self._status = ClientController.CMD
+        from func import State
+        self._status = State.Hall
         self._func_map = {}
         self._sk = sk
         self._username = username
@@ -48,7 +50,7 @@ class ClientController:
         self.__register_func(ClientController.CMD,  "history",  self.__handlehistory)
         self.__register_func(ClientController.CMD,  "sync",  self.__handlesync)
         self.__register_func(ClientController.CMD,  "room",  self.__handleroom)
-        self.__register_func(ClientController.CMD,  "info",  self.__handlefetchinfo)
+        # self.__register_func(ClientController.CMD,  "info",  self.__handlefetchinfo)
         self.__register_func(ClientController.CMD,  "exit",  self.__handleexit)
         self.__register_func(ClientController.CMD,  "reconnect",  self.__handlereconnect)
         
@@ -56,6 +58,7 @@ class ClientController:
         # self.__register_func(ClientController.BG,  "$cmd",   self.__handletobg)
         # self.__register_func(ClientController.BG,  "state",  self.__handlecheckstate)
         # self.__register_func(ClientController.BG,  "back",   self.__handleback)
+        
         
         
         
@@ -105,14 +108,14 @@ class ClientController:
     def __handlesync(self, inputinfo, *inputs):
         logging.debug(f"handle sycn")
         
-    def __handlefetchinfo(self, inputinfo, *inputs):
+    def handlefetchinfo(self, inputinfo, *inputs):
         logging.debug(f"handle fetch info")
         self._sk.send(Package.buildpackage().add_cmd(Command.INFO).add_field("username", self._username).tobyteflow())
         
     # # bg functions
     # def __handlecheckstate(self, inputinfo, *inputs):
     #     logging.debug(f"handle check state")
-        
+                  
     # def __handleback(self, inputinfo, *inputs):
     #     logging.debug(f"handle back")
     
@@ -141,11 +144,20 @@ class ClientController:
         
         
     def interact(self, inputinfo, *inputs):
+        
+        
+        
         cmd_        = inputs[0]
-        funcmap_    = self._func_map.get(self._status, {})
-        func_       = funcmap_.get(cmd_, funcmap_.get("unk", self.__handleunknown))
-        logging.debug(f"check interact cmd {cmd_}, funcmap {funcmap_.keys()}, func_ {func_}, inputinfo {inputinfo}, inputs {inputs}")
-        func_(inputinfo, *inputs)
+        # funcmap_    = self._func_map.get(self._status, {})
+        # func_       = funcmap_.get(cmd_, funcmap_.get("unk", self.__handleunknown))
+        
+        
+        # func_(inputinfo, *inputs)
+        
+        from func import ClientFuncMap
+        func = ClientFuncMap.get(cmd_+"@"+self._status)
+        logging.debug(f"check interact cmd {cmd_}, func_ {func}, inputinfo {inputinfo}, inputs {inputs}")
+        func.clientaction(self, inputinfo=inputinfo, sendarg=inputs)
         
 
 
@@ -181,6 +193,10 @@ class Client:
             logging.info(f"message {m}")
         self._msgbuffer.clear()  
         
+    def showretmsg(self, msg):
+        logging.info("")
+        print(msg)
+        
     def _recv(self):
         data = self._sk.recv(1024)
         if data == b"":
@@ -189,6 +205,8 @@ class Client:
             return None, -2
         else:
             return data, 0
+        
+        
         
     def _recvLoop(self):
         errortime = 0
@@ -202,26 +220,35 @@ class Client:
                 break
             
             try:
-            
+                from func import ClientRecallMap
                 package = Package.parsebyteflow(recv_bytes)
-                logging.debug(f"recv msg {package.get_data()}")
+                ret_cmd = package.get_data().get("cmd")
+                ret_msg = package.get_data().get(ret_cmd)
+                print(package)
+                func = ClientRecallMap.get(ret_cmd)
+                func.clientrecall(self, ret_msg)
                 
-                if Command.SYNC_RET in package.get_data():
-                    self.lastsync = datetime.timestamp(datetime.now())
-                    messagedata = package.get_data()[Command.SYNC_RET]
-                    for m in messagedata:
-                        message = Message.parse(**m)
-                        self._msgbuffer.append(message)
                 
-                if Command.INFO_RET in package.get_data():
-                    messagedata = package.get_data()[Command.INFO_RET]
-                    print(messagedata)
+            
+                # package = Package.parsebyteflow(recv_bytes)
+                # logging.debug(f"recv msg {package.get_data()}")
+                
+                # if Command.SYNC_RET in package.get_data():
+                #     self.lastsync = datetime.timestamp(datetime.now())
+                #     messagedata = package.get_data()[Command.SYNC_RET]
+                #     for m in messagedata:
+                #         message = Message.parse(**m)
+                #         self._msgbuffer.append(message)
+                
+                # if "ret_" + "info" in package.get_data():
+                #     messagedata = package.get_data()["ret_" + "info"]
+                #     print(messagedata)
                     
-                if Command.ROOM_RET in package.get_data():
-                    msg = package.get_data()[Command.ROOM_RET]
-                    if msg == "enter":
-                        logging.info("entered room")
-                        self.controller.interact("$chat", "$chat")
+                # if Command.ROOM_RET in package.get_data():
+                #     msg = package.get_data()[Command.ROOM_RET]
+                #     if msg == "enter":
+                #         logging.info("entered room")
+                #         self.controller.interact("$chat", "$chat")
                 
                 
                 if self.controller._status == ClientController.CHAT:

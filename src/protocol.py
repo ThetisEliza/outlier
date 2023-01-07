@@ -94,6 +94,11 @@ class Package:
         self.data[field] = value
         return self
     
+    def add_field_if(self, condition: bool, field: str, value):
+        if condition:
+            self.data[field] = value
+        return self
+    
     def add_cmd(self, cmd: str):
         self.data["cmd"] = cmd
         return self

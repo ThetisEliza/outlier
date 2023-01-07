@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
-LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2022-11-18 18:47:27
+LastEditors: Xiaofei wxf199601@gmail.com
+LastEditTime: 2023-01-06 17:45:46
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -42,7 +42,7 @@ class ChatRoom:
         return cm
     
     def enterconn(self, conn):
-        self.connects.append(conn)
+        self.connects.append(conn)        
         conn._chatroom = self
     
     def leaveconn(self, conn):
@@ -259,43 +259,92 @@ class ClientConn:
             logging.info(f"remote conn closed: {self._conn}")
             return -1
         
-        if "msg" in package.get_data():
-            self._chatroom._bc.putmsg(Message(package.get_data().get("msg", ""), package.get_data().get("username"), package.get_data().get('timestamp')))
         
-        elif "cmd" in package.get_data():
-            if package.get_data().get('cmd', "") == Command.SYNC:
-                self._chatroom._bc.syncmsg(package.get_data().get('timestamp'), package.get_data().get('username'), self._conn)
-                ...
-            elif package.get_data().get('cmd', "") == Command.INFO:
-                # send current info
-                logging.info("Check get info")
-                self.send(Package.buildpackage().add_field(Command.INFO_RET, Manager.getinstance().getinfo()).tobyteflow())
-                ...
-            elif package.get_data().get('cmd', "") == Command.DS:
-                # send disconnect
-                ...
-            elif package.get_data().get('cmd', "") == Command.FETCH:
-                # send fetch
-                ...
-            elif package.get_data().get('cmd', "") == Command.ROOM:
-                # send room
+        from func import ServerFuncMap
+        command = package.get_data().get('cmd', "")
+        func = ServerFuncMap.get(command)
+        
+        if func:
+            logging.info(f"server func check calling {func}")
+            func.serveraction(self, self._chatroom._bc if self._chatroom else None, **package.get_data())
+    
+    
+    
+    
+    # Maybe later we can use `decorator` to register server function on FUNCTIONS CONFIGURed in func.py
+    # Such as `@BIZREG("INFO")`
+    
+    # Biz Segment
+    
+    def giveinfo(self, **kwargs):
+        return Manager.getinstanceTest().getinfo(), None
+    
+
+    
+    def changeroom(self, **kwargs):
+        print("args:", kwargs)
+        username = kwargs.get('username')
+        roomname = kwargs.get('room')
+        self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
+        logging.info("Created a room")
+        return "You entered the room", "Some one entered room"
+    
+    
+        # if 'roomname' in package.get_data():
+        #     username = package.get_data().get('username')
+        #     roomname = package.get_data().get('roomname')
+        #     room = Manager.getinstance().getroom(roomname)
+        #     if room is None:
+        #         self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self, username))
+        #         logging.info(f"Created a room: {username}")    
+        #         self.send(Package.buildpackage().add_field(Command.ROOM_RET, "err").tobyteflow())
+        #     else:
+        #         room.enterconn(self)
+        #         logging.info(f"Enter the room: {room._name}")    
+        #         self.send(Package.buildpackage().add_field(Command.ROOM_RET, "enter").tobyteflow())
+        # else:
+        #     self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
+        #     logging.info("Created a room")
+        #     self.send(Package.buildpackage().add_field(Command.ROOM_RET, "new").tobyteflow())
+            
+        
+        # if "msg" in package.get_data():
+        #     self._chatroom._bc.putmsg(Message(package.get_data().get("msg", ""), package.get_data().get("username"), package.get_data().get('timestamp')))
+        
+        # elif "cmd" in package.get_data():
+        #     if package.get_data().get('cmd', "") == Command.SYNC:
+        #         self._chatroom._bc.syncmsg(package.get_data().get('timestamp'), package.get_data().get('username'), self._conn)
+        #         ...
+        #     elif package.get_data().get('cmd', "") == Command.INFO:
+        #         # send current info
+        #         logging.info("Check get info")
+        #         self.send(Package.buildpackage().add_field(Command.INFO_RET, Manager.getinstance().getinfo()).tobyteflow())
+        #         ...
+        #     elif package.get_data().get('cmd', "") == Command.DS:
+        #         # send disconnect
+        #         ...
+        #     elif package.get_data().get('cmd', "") == Command.FETCH:
+        #         # send fetch
+        #         ...
+        #     elif package.get_data().get('cmd', "") == Command.ROOM:
+        #         # send room
                 
-                if 'roomname' in package.get_data():
-                    username = package.get_data().get('username')
-                    roomname = package.get_data().get('roomname')
-                    room = Manager.getinstance().getroom(roomname)
-                    if room is None:
-                        self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self, username))
-                        logging.info(f"Created a room: {username}")    
-                        self.send(Package.buildpackage().add_field(Command.ROOM_RET, "err").tobyteflow())
-                    else:
-                        room.enterconn(self)
-                        logging.info(f"Enter the room: {room._name}")    
-                        self.send(Package.buildpackage().add_field(Command.ROOM_RET, "enter").tobyteflow())
-                else:
-                    self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
-                    logging.info("Created a room")
-                    self.send(Package.buildpackage().add_field(Command.ROOM_RET, "new").tobyteflow())
+        #         if 'roomname' in package.get_data():
+        #             username = package.get_data().get('username')
+        #             roomname = package.get_data().get('roomname')
+        #             room = Manager.getinstance().getroom(roomname)
+        #             if room is None:
+        #                 self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self, username))
+        #                 logging.info(f"Created a room: {username}")    
+        #                 self.send(Package.buildpackage().add_field(Command.ROOM_RET, "err").tobyteflow())
+        #             else:
+        #                 room.enterconn(self)
+        #                 logging.info(f"Enter the room: {room._name}")    
+        #                 self.send(Package.buildpackage().add_field(Command.ROOM_RET, "enter").tobyteflow())
+        #         else:
+        #             self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
+        #             logging.info("Created a room")
+        #             self.send(Package.buildpackage().add_field(Command.ROOM_RET, "new").tobyteflow())
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
