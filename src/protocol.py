@@ -116,7 +116,6 @@ class Package:
             data = Encrption.decrypt(self.byteflow)
             self.data = json.loads(data)
         except Exception as e:
-            self.byteflow = "err"
             self.data = {}
         return self
     
@@ -135,6 +134,10 @@ class Package:
     
     def __repr__(self) -> str:
         return f"data:{self.data}, bytes:{self.byteflow}"  
+    
+    def view(self):
+        print(repr(self))
+        return self
     
     @staticmethod
     def buildpackage():

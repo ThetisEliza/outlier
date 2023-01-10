@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-07 22:03:15
+LastEditTime: 2023-01-10 17:19:07
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -19,8 +19,8 @@ import traceback
 
 from manager import Config
 from protocol import Package, Command, Message
-from regdecorator import bizServerReg, ClassReg, INFO
-
+from regdecorator import bizFuncServerReg, ServerClassReg
+from func import RegisteredFunc
 import utils
 
 
@@ -54,6 +54,14 @@ class ChatRoom:
     def __repr__(self) -> str:
         l = ("PSWD" if self._passwd else "FREE")
         return f"{'room:'+str(self._name):10}\t{l}\t{len(self.connects)}\t{len(self.history)}"
+    
+    @property
+    def details(self) -> str:
+        ret = f"Room: {self._name}\n"
+        for conn in self.connects:
+            ret += f"Connecting: {conn._name}\tat {conn._addr}\n"
+        ret += f"room history message size: {len(self._bc.allhistory)}\n"
+        return ret
     
     @staticmethod
     def header():
@@ -162,12 +170,9 @@ class Broadcaster:
     def __init__(self, conns) -> None:
         self._stop = False
         self.syncqueue  = Queue()
+        self.conns = conns
         self.allhistory: List[Message] = []
-        self.broadthread = Thread(target=self._broadcastLoop, args=(conns,))
-        self.broadthread.setDaemon(True)
-        self.broadthread.start()
-        
-        
+
         
     def putmsg(self, msg):
         logging.info(f"collect message {msg}")
@@ -180,30 +185,32 @@ class Broadcaster:
         flow = Package.buildpackage().add_field("sync", list(map(lambda x:x.jsonallize(), msgbuffer))).tobyteflow()
         conn.send(flow)
         
-        
-    def _broadcastLoop(self, conns):
-        """
-        This is a loop to broad cast all connected client. May be we could differentiate
-        some channels later, and this should be move to a more abstractive channel class
-        """
-        while not self._stop:
-            while self.syncqueue.empty():
-                time.sleep(0.1)                
+    def getunsyncedmsg(self):
+        buffer = []
+        while not self.syncqueue.empty():       
             msg = self.syncqueue.get()
-            flow = Package.buildpackage().add_field(Command.SYNC_RET, [msg.jsonallize()]).tobyteflow()
-            logging.debug(f"check broadcasting client {conns}")
-            for client in conns:
-                client.send(flow)
+            buffer.append(msg)
+        return buffer
+            
+    
+    def broadcast(self, msgflow, conn=None):
+        for client in self.conns:
+            if conn is None or client != conn:
+                client.send(msgflow)
+
+        
 
 
-@ClassReg
+@ServerClassReg
 class ClientConn:
     def __init__(self, conn, addr) -> None:
         self._conn = conn
+        self._addr = addr
         self._connthread = Thread(target=self._connLoop)
         self._connthread.setDaemon(True)
         self._activate()
         self._chatroom: ChatRoom = None
+        self._name = None
         
     
     def _recv(self):
@@ -261,10 +268,8 @@ class ClientConn:
             logging.info(f"remote conn closed: {self._conn}")
             return -1
         
-        
-        from regdecorator import ServerFuncMap
         command = package.get_data().get('cmd', "")
-        func = ServerFuncMap.get(command)
+        func = RegisteredFunc.getServerFunc(command)
         
         if func:
             logging.info(f"server func check calling {func}")
@@ -278,22 +283,80 @@ class ClientConn:
     
     # Biz Segment
     
-    
-    
-    @bizServerReg(INFO)
+    @bizFuncServerReg(RegisteredFunc.INFO)
     def giveinfo(self, **kwargs):
         return Manager.getinstanceTest().getinfo(), None
     
-
     
+    @bizFuncServerReg(RegisteredFunc.ROOM)
     def changeroom(self, **kwargs):
         print("args:", kwargs)
         username = kwargs.get('username')
-        roomname = kwargs.get('room')
-        self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
-        logging.info("Created a room")
-        return "You entered the room", "Some one entered room"
+        if self._name is None:
+            self._name = username
+        cmd = kwargs.get("cmd", "")
+        roomargs = kwargs.get(cmd, [])
+        roomname = roomargs[1] if len(roomargs) == 2 else ""
+        
+        room = Manager.getinstanceTest().getroom(roomname)
+        if roomname == "":
+            self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
+            return "You created and entered a room", None
+        elif room is None:
+            return f"No such room named {roomname}", None
+        else:
+            room.enterconn(self)
+            return "You entered the room", f"{username} entered the room"
     
+    
+    @bizFuncServerReg(RegisteredFunc.EXIT)
+    def exit(self, **kwargs):
+        print("args", kwargs)
+        Manager.getinstance().disconn(self)
+        return "Exit the server", None
+        
+    
+    
+    @bizFuncServerReg(RegisteredFunc.CHAT)    
+    def chat(self, *args, **kwargs):
+        print(args, kwargs)
+        cmd = kwargs.get("cmd", "")
+        Manager.getinstance().getatroom(self)._bc.putmsg(Message(" ".join(kwargs.get(cmd)), kwargs.get("username"), kwargs.get("timestamp")))
+        msgs = Manager.getinstance().getatroom(self)._bc.getunsyncedmsg()
+        bcmsg = list(map(Message.jsonallize, msgs))
+        return bcmsg, bcmsg
+    
+    
+    @bizFuncServerReg(RegisteredFunc.CINFO)
+    def giveinfo(self, **kwargs):
+        room =  Manager.getinstance().getatroom(self)
+        if room is not None:
+            return room.details, None
+        else:
+            return "Error", None
+    
+    @bizFuncServerReg(RegisteredFunc.CLEAVE)
+    def exitroom(self, *args, **kwargs):
+        print(args, kwargs)
+        room = Manager.getinstance().getatroom(self)
+        if room is not None:
+            room.leaveconn(self)
+            return "Leave the room", "Someone left the room"
+        else:
+            return "Error, you are not at room", None
+        
+        
+    @bizFuncServerReg(RegisteredFunc.CEXIT)
+    def disconnectserver(self, *args, **kwargs):
+        print(args, kwargs)
+        Manager.getinstance().disconn(self)
+        room = Manager.getinstance().getatroom(self)
+        if room is not None:
+            room.leaveconn(self)
+            return "Disconnect with the server", "Someone left the room"
+        else:
+            return "Disconnect with the server", None
+        
     
         # if 'roomname' in package.get_data():
         #     username = package.get_data().get('username')

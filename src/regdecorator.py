@@ -1,13 +1,18 @@
 '''
 Date: 2023-01-07 21:00:51
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-07 22:29:06
+LastEditTime: 2023-01-10 16:05:23
 FilePath: /outlier/src/regdecorator.py
 '''
+import logging
 from func import FuncBase, State
-from client import Client
 
-def bizServerReg(bizfunc: FuncBase):
+import inspect
+# import logging
+
+# Server Decorators
+
+def bizFuncServerReg(*bizfunc: FuncBase):
     def inner(fn):
         def decorate(*args, **kwargs):
             ret = fn(*args, **kwargs)
@@ -17,75 +22,51 @@ def bizServerReg(bizfunc: FuncBase):
         return decorate
     return inner
 
-INFO = FuncBase("info", State.Hall, True, localrecall=Client.showretmsg)
-# ROOM = FuncBase("room", State.Hall, True, localrecall=Client.showretmsg, servereffectaction=ClientConn.changeroom)
 
-
-FuncConfig = [ INFO ]
-
-ClientFuncMap = {
-    func._statusname: func for func in FuncConfig
-}
-
-ClientRecallMap = {
-    func._retname : func for func in FuncConfig
-}
-
-ServerFuncMap = {
-    func._cmd : func for func in FuncConfig
-}
-
-
-print(FuncConfig)
-print(ClientFuncMap)
-print(ClientRecallMap)
-print(ServerFuncMap)
-
-
-import inspect
-
-def ClassReg(cls: type):
-    print("reg")
-    for name, func in  inspect.getmembers(cls, predicate=inspect.isfunction):
-        print(name, func)
+def ServerClassReg(cls: type):
+    print("Server register bussiness functions")
+    for name, func in inspect.getmembers(cls, predicate=inspect.isfunction):
         if 'tag' in dir(func) and func.tag is not None:
-            BizFunc = func.tag
-            BizFunc._kwargs['servereffectaction'] = func
-            print(f"register fn {func} at {BizFunc} finished")
-            
+            for BizFunc in func.tag:
+                BizFunc._kwargs['servereffectaction'] = func
+                print(f"register fn {func} at {BizFunc} finished")
     return cls
 
 
-# @ClassReg
-# class A:
-#     def __init__(self, a, b) -> None:
-#         self.a = a
-#         self.b = b
-        
-#     @bizServerReg(INFO)
-#     def b(self):
-#         print("b")
-        
-#     @bizServerReg(INFO)
-#     def c(self):
-#         print("c")
-        
-#     @bizServerReg(INFO)
-#     def d(self):
-#         print("d")
-    
-# A.b.tag = "s"
-# A.c.tag = "s"
-# A.d.tag = "s"
 
-# a = A(1, 2)
-# print(a)
+# Client Decorators
 
-# print(INFO)
+def bizFuncClientRequestReg(*bizfunc: FuncBase):
+    def inner(fn):
+        def decorate(*args, **kwargs):
+            ret = fn(*args, **kwargs)
+            return ret
+        # Here is the final decoratored function print(decorate)
+        decorate.localactiontag = bizfunc
+        return decorate
+    return inner
 
-@bizServerReg(INFO)
-def c():
-    print("c")
-    return "cret"
-    
-print(c())
+def bizFuncClientRecallReg(*bizfunc: FuncBase):
+    def inner(fn):
+        def decorate(*args, **kwargs):
+            ret = fn(*args, **kwargs)
+            return ret
+        # Here is the final decoratored function print(decorate)
+        decorate.recalltag = bizfunc
+        return decorate
+    return inner
+
+
+def ClientClassReg(cls: type):
+    logging.debug("Client register bussiness functions")
+    for name, func in inspect.getmembers(cls, predicate=inspect.isfunction):
+        if 'localactiontag' in dir(func) and func.localactiontag is not None:
+            for BizFunc in func.localactiontag:
+                BizFunc._kwargs['localaction'] = func
+                logging.debug(f"register fn {func} at {BizFunc} finished")
+        if 'recalltag' in dir(func) and func.recalltag is not None:
+            for BizFunc in func.recalltag:
+                BizFunc._kwargs['localrecall'] = func
+                logging.debug(f"register fn {func} at {BizFunc} finished")
+    return cls
+
