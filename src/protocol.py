@@ -1,3 +1,9 @@
+'''
+Date: 2023-01-07 22:59:34
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-01-10 18:08:08
+FilePath: /outlier/src/protocol.py
+'''
 import json
 import hashlib
 from datetime import datetime
@@ -7,6 +13,7 @@ class Command:
     SYNC  = "sync"
     DS    = "disconnect"
     INFO  = "info"
+    ROOM  = "room"
     
     RET   = "_ret"
     
@@ -14,6 +21,7 @@ class Command:
     SYNC_RET    = SYNC + RET
     DS_RET      = DS + RET
     INFO_RET    = INFO + RET
+    ROOM_RET    = ROOM + RET
 
 
 KEY = "asdqwezxc"
@@ -92,6 +100,11 @@ class Package:
         self.data[field] = value
         return self
     
+    def add_field_if(self, condition: bool, field: str, value):
+        if condition:
+            self.data[field] = value
+        return self
+    
     def add_cmd(self, cmd: str):
         self.data["cmd"] = cmd
         return self
@@ -109,7 +122,6 @@ class Package:
             data = Encrption.decrypt(self.byteflow)
             self.data = json.loads(data)
         except Exception as e:
-            self.byteflow = "err"
             self.data = {}
         return self
     
@@ -128,6 +140,10 @@ class Package:
     
     def __repr__(self) -> str:
         return f"data:{self.data}, bytes:{self.byteflow}"  
+    
+    def view(self):
+        print(repr(self))
+        return self
     
     @staticmethod
     def buildpackage():
