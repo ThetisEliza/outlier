@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-10 17:19:07
+LastEditTime: 2023-01-10 17:56:48
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -43,8 +43,9 @@ class ChatRoom:
         return cm
     
     def enterconn(self, conn):
-        self.connects.append(conn)        
-        conn._chatroom = self
+        if conn not in self.connects:
+            self.connects.append(conn)
+            conn._chatroom = self
     
     def leaveconn(self, conn):
         if conn in self.connects:
@@ -272,7 +273,7 @@ class ClientConn:
         func = RegisteredFunc.getServerFunc(command)
         
         if func:
-            logging.info(f"server func check calling {func}")
+            logging.info(f"server func check calling {func} {self._chatroom._bc if self._chatroom else None} {package.get_data()}")
             func.serveraction(self, self._chatroom._bc if self._chatroom else None, **package.get_data())
     
     
@@ -284,8 +285,9 @@ class ClientConn:
     # Biz Segment
     
     @bizFuncServerReg(RegisteredFunc.INFO)
-    def giveinfo(self, **kwargs):
-        return Manager.getinstanceTest().getinfo(), None
+    def giveinfo(self, *args, **kwargs):
+        print(args, kwargs)
+        return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None
     
     
     @bizFuncServerReg(RegisteredFunc.ROOM)
@@ -300,8 +302,9 @@ class ClientConn:
         
         room = Manager.getinstanceTest().getroom(roomname)
         if roomname == "":
-            self._chatroom = Manager.getinstance().newroom(ChatRoom.create(self))
-            return "You created and entered a room", None
+            room = ChatRoom.create(self, username)
+            Manager.getinstance().newroom(room)
+            return f"You created and entered a room named as {username}", None
         elif room is None:
             return f"No such room named {roomname}", None
         else:
@@ -328,7 +331,7 @@ class ClientConn:
     
     
     @bizFuncServerReg(RegisteredFunc.CINFO)
-    def giveinfo(self, **kwargs):
+    def giveroominfo(self, **kwargs):
         room =  Manager.getinstance().getatroom(self)
         if room is not None:
             return room.details, None
@@ -339,6 +342,7 @@ class ClientConn:
     def exitroom(self, *args, **kwargs):
         print(args, kwargs)
         room = Manager.getinstance().getatroom(self)
+        self._chatroom = None
         if room is not None:
             room.leaveconn(self)
             return "Leave the room", "Someone left the room"

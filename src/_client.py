@@ -11,7 +11,7 @@ from regdecorator import bizFuncClientRequestReg, bizFuncClientRecallReg, Client
 from func import RegisteredFunc, State
 
 from typing import List
-
+import platform
 
 
 @ClientClassReg
@@ -40,6 +40,13 @@ class Client:
             logging.info(f"message {m}")
         self._msgbuffer.clear()  
 
+    @property
+    def localInfo(self):
+        ret = "Client details:\n"
+        ret += f"- Username: {self._username}\n"
+        ret += f"- System info: {platform.platform()}\n"
+        ret += f"- Python version & location: {sys.version}\n"
+        return ret
         
     
     @bizFuncClientRecallReg(RegisteredFunc.INFO)
@@ -49,18 +56,16 @@ class Client:
         print("Server details:")
         for arg in args:
             print(arg)
+        print(self.localInfo)
             
-        print("Client details:")
         
-        print("Username:")
-        print("System info:")
-        print("Python version & location:")
         
         
     @bizFuncClientRecallReg(RegisteredFunc.ROOM)
     def showroommsg(self, *args, **kwargs):
         for arg in args:
             print(arg)
+        
                 
                 
     @bizFuncClientRecallReg(RegisteredFunc.EXIT, RegisteredFunc.CEXIT)
@@ -90,10 +95,7 @@ class Client:
         for arg in args:
             print(arg)
             
-        print("Client details:")
-        print("Username:")
-        print("System info:")
-        print("Python version & location:")
+        print(self.localInfo)
     
     
     @bizFuncClientRecallReg(RegisteredFunc.CLEAVE)
@@ -102,7 +104,7 @@ class Client:
         logging.info("You exits room")
         
         
-    @bizFuncClientRequestReg(RegisteredFunc.DEFAULT, RegisteredFunc.CHELP)    
+    @bizFuncClientRequestReg(RegisteredFunc.DEFAULT, RegisteredFunc.CHELP, RegisteredFunc.HELP)    
     def showhelpmesg(self, *args, **kwargs):
         print("Supported commands:")
         for func in RegisteredFunc.FuncConfiguredList:

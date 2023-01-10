@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-03 14:58:05
 LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-10 16:42:00
+LastEditTime: 2023-01-10 17:32:40
 FilePath: /outlier/src/func.py
 '''
 
@@ -78,10 +78,8 @@ class FuncBase:
         
         
     def serveraction(self, conn, bc = None, **kwargs):
-        
         servereffectaction = self._kwargs.get("servereffectaction", nop)
         responsearg, bcarg = servereffectaction(conn, **kwargs)
-        
         
         # server response
         package = Package.buildpackage() \
@@ -116,9 +114,10 @@ class RegisteredFunc:
                     descparams="[room name]",
                     desc="To enter one of the room or create one by specified name or your username")
     EXIT = FuncBase("$exit", State.Hall, True, desc="To disconnect with the server")
+    HELP = FuncBase("$help", State.Hall, False)
     
     CHAT = FuncBase("$chat", State.Chat, True, commandpattern="^(?!\$).+", desc="To send msg to the chat room", usage="Type your message here. DO NOT start with `$`")
-    CINFO = FuncBase("$info", State.Chat, True, desc="To glance at the details of the room")
+    CINFO = FuncBase("$roominfo", State.Chat, True, desc="To glance at the details of the room")
     CLEAVE = FuncBase("$leave", State.Chat, True, stateswitch=State.Hall, desc="To leave the room")
     CEXIT = FuncBase("$exit", State.Chat, True, desc="To disconnect with the server")
     CCLEAR = FuncBase("$clear", State.Chat, False, desc="To clear the terminal")
