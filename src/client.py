@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:59:28
-LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-10 11:24:44
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-01-10 18:07:52
 FilePath: /outlier/src/client.py
 '''
 

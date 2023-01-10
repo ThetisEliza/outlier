@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-07 21:00:51
-LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-10 16:05:23
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-01-10 18:08:13
 FilePath: /outlier/src/regdecorator.py
 '''
 import logging

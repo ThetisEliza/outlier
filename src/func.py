@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-03 14:58:05
-LastEditors: Xiaofei wxf199601@gmail.com
-LastEditTime: 2023-01-10 17:32:40
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-01-10 18:07:59
 FilePath: /outlier/src/func.py
 '''
 

@@ -1,3 +1,9 @@
+'''
+Date: 2023-01-10 11:20:45
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-01-10 18:07:40
+FilePath: /outlier/src/_client.py
+'''
 
 import socket
 import time
