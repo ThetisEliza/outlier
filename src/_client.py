@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-10 11:20:45
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-11 14:07:22
+LastEditTime: 2023-01-11 14:39:37
 FilePath: /outlier/src/_client.py
 '''
 
@@ -157,11 +157,11 @@ class Client:
                 
                 if func._switch is not None and ret_msg is not None:
                     self._status = func._switch
-                
-                
+                    
                 if bc_msg is not None:
                     print(bc_msg)
-                func.clientrecall(self, ret_msg, bc=bc_msg)
+                else:
+                    func.clientrecall(self, ret_msg, bc=bc_msg)
                 
                 self.showbufferedmsg()
                 

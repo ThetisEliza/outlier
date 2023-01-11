@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-11 11:53:34
+LastEditTime: 2023-01-11 14:36:27
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -79,6 +79,9 @@ class Manager:
     def __init__(self) -> None:
         self.allconnects: List[ClientConn]          = []
         self.rooms      : List[ChatRoom]            = []
+        self.refresht   : Thread                    = Thread(target=self.refreshdetails)
+        self.refresht.setDaemon(True)
+        self.refresht.start()
     
     
     @staticmethod
@@ -127,6 +130,22 @@ class Manager:
         for room in self.rooms:
             ret += room.__repr__() + "\n"
         return ret
+    
+    def getdetails(self):
+        ret = "\nServer details:\n\n"
+        ret += "- all connects:\n"
+        for conn in self.allconnects:
+            ret += f"\t- conn: {conn._conn} at {conn._addr}, name: {conn._name} at room {conn._chatroom}\n"
+        ret += "- all rooms:\n"
+        for room in self.rooms:
+            ret += f"\t- room: {room.details}\n"
+        return ret
+            
+    def refreshdetails(self):
+        while True:
+            logging.info(f"Routing detail check {self.getdetails()}")
+            time.sleep(5)
+        
         
 '''
 I guess we should try a more specific pattern where an individual listener should
@@ -237,9 +256,9 @@ class ClientConn:
                     break
                 if self.process_package(*self._recv()) == -1:
                     break   
-                errortime = 0                 
+                errortime = 0                
             except Exception as e:
-                traceback.print_exc()
+                traceback.logging.debug_exc()
                 logging.warning(e)
                 time.sleep(1)
                 errortime += 1    
@@ -261,14 +280,9 @@ class ClientConn:
         
         
     def process_package(self, package, status):
-        logging.debug(f"receiving finished package: {package} status: {status}")
         package = Package.parsebyteflow(package)
-        logging.debug(f"receiving finished package: {package}")
-        
         if status == -1:
-            logging.info(f"remote conn closed: {self._addr}")
-            logging.info(f"remote conn closed: {self}")
-            logging.info(f"remote conn closed: {Manager.getinstance().getatroom(self)}")
+            
             RegisteredFunc.CEXIT.serveraction(self)
             return -1
         
@@ -289,13 +303,13 @@ class ClientConn:
     
     @bizFuncServerReg(RegisteredFunc.INFO)
     def giveinfo(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(args, kwargs)
         return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None, None
     
     
     @bizFuncServerReg(RegisteredFunc.ROOM)
     def changeroom(self, **kwargs):
-        print("args:", kwargs)
+        logging.debug("args:", kwargs)
         username = kwargs.get('username')
         if self._name is None:
             self._name = username
@@ -317,7 +331,7 @@ class ClientConn:
     
     @bizFuncServerReg(RegisteredFunc.EXIT)
     def exit(self, **kwargs):
-        print("args", kwargs)
+        logging.debug("args", kwargs)
         Manager.getinstance().disconn(self)
         return "Exit the server", None, None
         
@@ -325,7 +339,7 @@ class ClientConn:
     
     @bizFuncServerReg(RegisteredFunc.CHAT)    
     def chat(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(args, kwargs)
         cmd = kwargs.get("cmd", "")
         Manager.getinstance().getatroom(self)._bc.putmsg(Message(" ".join(kwargs.get(cmd)), kwargs.get("username"), kwargs.get("timestamp")))
         room = Manager.getinstance().getatroom(self)
@@ -344,7 +358,7 @@ class ClientConn:
     
     @bizFuncServerReg(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(args, kwargs)
         room = Manager.getinstance().getatroom(self)
         self._chatroom = None
         if room is not None:
@@ -356,7 +370,7 @@ class ClientConn:
         
     @bizFuncServerReg(RegisteredFunc.CEXIT)
     def disconnectserver(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(f"{args}, {kwargs}")
         
         room = Manager.getinstance().getatroom(self)
         Manager.getinstance().disconn(self)
