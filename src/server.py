@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:08:17
+LastEditTime: 2023-01-11 11:53:34
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -176,12 +176,12 @@ class Broadcaster:
 
         
     def putmsg(self, msg):
-        logging.info(f"collect message {msg}")
+        logging.debug(f"collect message {msg}")
         self.syncqueue.put(msg)
         self.allhistory.append(msg)
         
     def syncmsg(self, timestamp, name, conn):
-        logging.info(f"syncmsg message {timestamp} {name}")
+        logging.debug(f"syncmsg message {timestamp} {name}")
         msgbuffer: List[Message] = list(filter(lambda x:x.timestamp > timestamp, self.allhistory))
         flow = Package.buildpackage().add_field("sync", list(map(lambda x:x.jsonallize(), msgbuffer))).tobyteflow()
         conn.send(flow)
@@ -215,8 +215,8 @@ class ClientConn:
         
     
     def _recv(self):
+        logging.debug(f"{self._name} trying recv message")
         data = self._conn.recv(1024)
-        logging.info(f"recv message {data}")
         if data == b"":
             return None, -1
         elif data is None:
@@ -242,7 +242,7 @@ class ClientConn:
                 traceback.print_exc()
                 logging.warning(e)
                 time.sleep(1)
-                errortime += 1                
+                errortime += 1    
         self._deactivate()
             
 
@@ -261,20 +261,23 @@ class ClientConn:
         
         
     def process_package(self, package, status):
-        logging.info(f"receiving finished package: {package} status: {status}")
+        logging.debug(f"receiving finished package: {package} status: {status}")
         package = Package.parsebyteflow(package)
         logging.debug(f"receiving finished package: {package}")
         
         if status == -1:
-            logging.info(f"remote conn closed: {self._conn}")
+            logging.info(f"remote conn closed: {self._addr}")
+            logging.info(f"remote conn closed: {self}")
+            logging.info(f"remote conn closed: {Manager.getinstance().getatroom(self)}")
+            RegisteredFunc.CEXIT.serveraction(self)
             return -1
         
         command = package.get_data().get('cmd', "")
         func = RegisteredFunc.getServerFunc(command)
         
         if func:
-            logging.info(f"server func check calling {func} {self._chatroom._bc if self._chatroom else None} {package.get_data()}")
-            func.serveraction(self, self._chatroom._bc if self._chatroom else None, **package.get_data())
+            logging.info(f"server func check calling {func} {package.get_data()}")
+            func.serveraction(self, **package.get_data())
     
     
     
@@ -287,7 +290,7 @@ class ClientConn:
     @bizFuncServerReg(RegisteredFunc.INFO)
     def giveinfo(self, *args, **kwargs):
         print(args, kwargs)
-        return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None
+        return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None, None
     
     
     @bizFuncServerReg(RegisteredFunc.ROOM)
@@ -304,19 +307,19 @@ class ClientConn:
         if roomname == "":
             room = ChatRoom.create(self, username)
             Manager.getinstance().newroom(room)
-            return f"You created and entered a room named as {username}", None
+            return f"You created and entered a room named as {username}", None, room._bc
         elif room is None:
-            return f"No such room named {roomname}", None
+            return f"No such room named {roomname}", None, None
         else:
             room.enterconn(self)
-            return "You entered the room", f"{username} entered the room"
+            return f"You entered the room {room._name}", f"{username} entered the room", room._bc
     
     
     @bizFuncServerReg(RegisteredFunc.EXIT)
     def exit(self, **kwargs):
         print("args", kwargs)
         Manager.getinstance().disconn(self)
-        return "Exit the server", None
+        return "Exit the server", None, None
         
     
     
@@ -325,18 +328,19 @@ class ClientConn:
         print(args, kwargs)
         cmd = kwargs.get("cmd", "")
         Manager.getinstance().getatroom(self)._bc.putmsg(Message(" ".join(kwargs.get(cmd)), kwargs.get("username"), kwargs.get("timestamp")))
-        msgs = Manager.getinstance().getatroom(self)._bc.getunsyncedmsg()
+        room = Manager.getinstance().getatroom(self)
+        msgs = room._bc.getunsyncedmsg()
         bcmsg = list(map(Message.jsonallize, msgs))
-        return bcmsg, bcmsg
+        return bcmsg, bcmsg, room._bc
     
     
     @bizFuncServerReg(RegisteredFunc.CINFO)
     def giveroominfo(self, **kwargs):
         room =  Manager.getinstance().getatroom(self)
         if room is not None:
-            return room.details, None
+            return room.details, None, None
         else:
-            return "Error", None
+            return "Error", None, None
     
     @bizFuncServerReg(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
@@ -345,21 +349,23 @@ class ClientConn:
         self._chatroom = None
         if room is not None:
             room.leaveconn(self)
-            return "Leave the room", "Someone left the room"
+            return "Leave the room", f"{self._name} left the room", room._bc
         else:
-            return "Error, you are not at room", None
+            return "Error, you are not at room", None, None
         
         
     @bizFuncServerReg(RegisteredFunc.CEXIT)
     def disconnectserver(self, *args, **kwargs):
         print(args, kwargs)
-        Manager.getinstance().disconn(self)
+        
         room = Manager.getinstance().getatroom(self)
+        Manager.getinstance().disconn(self)
+        
         if room is not None:
             room.leaveconn(self)
-            return "Disconnect with the server", "Someone left the room"
+            return "Disconnect with the server", f"{self._name} left the room", room._bc
         else:
-            return "Disconnect with the server", None
+            return "Disconnect with the server", None, None
         
     
         # if 'roomname' in package.get_data():

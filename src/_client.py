@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-10 11:20:45
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:07:40
+LastEditTime: 2023-01-11 14:07:22
 FilePath: /outlier/src/_client.py
 '''
 
@@ -63,14 +63,15 @@ class Client:
         for arg in args:
             print(arg)
         print(self.localInfo)
-            
+        
         
         
         
     @bizFuncClientRecallReg(RegisteredFunc.ROOM)
     def showroommsg(self, *args, **kwargs):
         for arg in args:
-            print(arg)
+            if arg is not None:
+                print(arg)
         
                 
                 
@@ -107,7 +108,9 @@ class Client:
     @bizFuncClientRecallReg(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
         logging.debug(f"recved msg {args} {kwargs}")
-        logging.info("You exits room")
+        for arg in args:
+            if arg is not None:
+                print(arg)
         
         
     @bizFuncClientRequestReg(RegisteredFunc.DEFAULT, RegisteredFunc.CHELP, RegisteredFunc.HELP)    
@@ -147,7 +150,17 @@ class Client:
                 ret_msg = package.get_data().get(ret_cmd)
                 bc_msg  = package.get_data().get("bc_"+ret_cmd)
                 
+                
+                
+                
                 func = RegisteredFunc.getClientRecallFunc(ret_cmd)
+                
+                if func._switch is not None and ret_msg is not None:
+                    self._status = func._switch
+                
+                
+                if bc_msg is not None:
+                    print(bc_msg)
                 func.clientrecall(self, ret_msg, bc=bc_msg)
                 
                 self.showbufferedmsg()

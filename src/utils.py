@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-07 22:59:34
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:08:22
+LastEditTime: 2023-01-10 19:58:51
 FilePath: /outlier/src/utils.py
 '''
 import logging
@@ -11,7 +11,7 @@ FORMAT = '%(asctime)s - %(message)s'
 
 def init_logger(level, format=FORMAT, filehandlename=None):
     if filehandlename is not None:
-        logging.basicConfig(format=format, level=eval("logging."+level), handlers=[handlers.RotatingFileHandler(filehandlename, maxBytes=5000000, backupCount=20)])
+        logging.basicConfig(format=format, level=eval("logging."+level), handlers=[handlers.RotatingFileHandler(filehandlename, maxBytes=500000, backupCount=20)])
     else:
         logging.basicConfig(format=format, level=eval("logging."+level))
     

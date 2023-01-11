@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-07 22:59:34
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:08:08
+LastEditTime: 2023-01-11 10:22:28
 FilePath: /outlier/src/protocol.py
 '''
 import json
@@ -141,8 +141,11 @@ class Package:
     def __repr__(self) -> str:
         return f"data:{self.data}, bytes:{self.byteflow}"  
     
-    def view(self):
-        print(repr(self))
+    def view(self, isbtyesrepr=False):
+        if isbtyesrepr:
+            print(repr(self))
+        else:
+            print(f"data:{self.data}")
         return self
     
     @staticmethod

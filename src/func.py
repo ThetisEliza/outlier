@@ -1,7 +1,7 @@
 '''
 Date: 2023-01-03 14:58:05
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:07:59
+LastEditTime: 2023-01-11 11:48:53
 FilePath: /outlier/src/func.py
 '''
 
@@ -71,15 +71,16 @@ class FuncBase:
         
         
     def clientrecall(self, client, *args, **kwargs):
-        if self._switch is not None:
-            client._status = self._switch
+        
         localrecall = self._kwargs.get("localrecall", nop)
         localrecall(client,  *args, **kwargs)
         
         
-    def serveraction(self, conn, bc = None, **kwargs):
+    def serveraction(self, conn, **kwargs):
         servereffectaction = self._kwargs.get("servereffectaction", nop)
-        responsearg, bcarg = servereffectaction(conn, **kwargs)
+        
+                
+        responsearg, bcarg, bc = servereffectaction(conn, **kwargs)
         
         # server response
         package = Package.buildpackage() \
@@ -87,8 +88,12 @@ class FuncBase:
             .add_field_if(responsearg is not None, "ret_" + self._cmd, responsearg) \
             .view() \
             .tobyteflow()
-        conn.send(package)
-        time.sleep(0.1)
+        
+        try:
+            conn.send(package)
+            time.sleep(0.1)
+        except:
+            print(f"conn has been closed {conn}")
         
         if bc is not None:
             # server broadcast
@@ -102,7 +107,7 @@ class FuncBase:
 
     
     def __repr__(self) -> str:
-        return f"FuncBase:{self._cmd}, kwargs:{self._kwargs}"
+        return f"FuncBase:{self._cmd}"
 
 import re
 from typing import List, Tuple
