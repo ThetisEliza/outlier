@@ -1,7 +1,7 @@
 '''
 Date: 2022-11-16 16:49:18
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-10 18:08:17
+LastEditTime: 2023-01-11 14:36:27
 FilePath: /outlier/src/server.py
 
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
@@ -79,6 +79,9 @@ class Manager:
     def __init__(self) -> None:
         self.allconnects: List[ClientConn]          = []
         self.rooms      : List[ChatRoom]            = []
+        self.refresht   : Thread                    = Thread(target=self.refreshdetails)
+        self.refresht.setDaemon(True)
+        self.refresht.start()
     
     
     @staticmethod
@@ -127,6 +130,22 @@ class Manager:
         for room in self.rooms:
             ret += room.__repr__() + "\n"
         return ret
+    
+    def getdetails(self):
+        ret = "\nServer details:\n\n"
+        ret += "- all connects:\n"
+        for conn in self.allconnects:
+            ret += f"\t- conn: {conn._conn} at {conn._addr}, name: {conn._name} at room {conn._chatroom}\n"
+        ret += "- all rooms:\n"
+        for room in self.rooms:
+            ret += f"\t- room: {room.details}\n"
+        return ret
+            
+    def refreshdetails(self):
+        while True:
+            logging.info(f"Routing detail check {self.getdetails()}")
+            time.sleep(5)
+        
         
 '''
 I guess we should try a more specific pattern where an individual listener should
@@ -176,12 +195,12 @@ class Broadcaster:
 
         
     def putmsg(self, msg):
-        logging.info(f"collect message {msg}")
+        logging.debug(f"collect message {msg}")
         self.syncqueue.put(msg)
         self.allhistory.append(msg)
         
     def syncmsg(self, timestamp, name, conn):
-        logging.info(f"syncmsg message {timestamp} {name}")
+        logging.debug(f"syncmsg message {timestamp} {name}")
         msgbuffer: List[Message] = list(filter(lambda x:x.timestamp > timestamp, self.allhistory))
         flow = Package.buildpackage().add_field("sync", list(map(lambda x:x.jsonallize(), msgbuffer))).tobyteflow()
         conn.send(flow)
@@ -215,8 +234,8 @@ class ClientConn:
         
     
     def _recv(self):
+        logging.debug(f"{self._name} trying recv message")
         data = self._conn.recv(1024)
-        logging.info(f"recv message {data}")
         if data == b"":
             return None, -1
         elif data is None:
@@ -237,12 +256,12 @@ class ClientConn:
                     break
                 if self.process_package(*self._recv()) == -1:
                     break   
-                errortime = 0                 
+                errortime = 0                
             except Exception as e:
-                traceback.print_exc()
+                traceback.logging.debug_exc()
                 logging.warning(e)
                 time.sleep(1)
-                errortime += 1                
+                errortime += 1    
         self._deactivate()
             
 
@@ -261,20 +280,18 @@ class ClientConn:
         
         
     def process_package(self, package, status):
-        logging.info(f"receiving finished package: {package} status: {status}")
         package = Package.parsebyteflow(package)
-        logging.debug(f"receiving finished package: {package}")
-        
         if status == -1:
-            logging.info(f"remote conn closed: {self._conn}")
+            
+            RegisteredFunc.CEXIT.serveraction(self)
             return -1
         
         command = package.get_data().get('cmd', "")
         func = RegisteredFunc.getServerFunc(command)
         
         if func:
-            logging.info(f"server func check calling {func} {self._chatroom._bc if self._chatroom else None} {package.get_data()}")
-            func.serveraction(self, self._chatroom._bc if self._chatroom else None, **package.get_data())
+            logging.info(f"server func check calling {func} {package.get_data()}")
+            func.serveraction(self, **package.get_data())
     
     
     
@@ -286,13 +303,13 @@ class ClientConn:
     
     @bizFuncServerReg(RegisteredFunc.INFO)
     def giveinfo(self, *args, **kwargs):
-        print(args, kwargs)
-        return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None
+        logging.debug(args, kwargs)
+        return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None, None
     
     
     @bizFuncServerReg(RegisteredFunc.ROOM)
     def changeroom(self, **kwargs):
-        print("args:", kwargs)
+        logging.debug("args:", kwargs)
         username = kwargs.get('username')
         if self._name is None:
             self._name = username
@@ -304,62 +321,65 @@ class ClientConn:
         if roomname == "":
             room = ChatRoom.create(self, username)
             Manager.getinstance().newroom(room)
-            return f"You created and entered a room named as {username}", None
+            return f"You created and entered a room named as {username}", None, room._bc
         elif room is None:
-            return f"No such room named {roomname}", None
+            return f"No such room named {roomname}", None, None
         else:
             room.enterconn(self)
-            return "You entered the room", f"{username} entered the room"
+            return f"You entered the room {room._name}", f"{username} entered the room", room._bc
     
     
     @bizFuncServerReg(RegisteredFunc.EXIT)
     def exit(self, **kwargs):
-        print("args", kwargs)
+        logging.debug("args", kwargs)
         Manager.getinstance().disconn(self)
-        return "Exit the server", None
+        return "Exit the server", None, None
         
     
     
     @bizFuncServerReg(RegisteredFunc.CHAT)    
     def chat(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(args, kwargs)
         cmd = kwargs.get("cmd", "")
         Manager.getinstance().getatroom(self)._bc.putmsg(Message(" ".join(kwargs.get(cmd)), kwargs.get("username"), kwargs.get("timestamp")))
-        msgs = Manager.getinstance().getatroom(self)._bc.getunsyncedmsg()
+        room = Manager.getinstance().getatroom(self)
+        msgs = room._bc.getunsyncedmsg()
         bcmsg = list(map(Message.jsonallize, msgs))
-        return bcmsg, bcmsg
+        return bcmsg, bcmsg, room._bc
     
     
     @bizFuncServerReg(RegisteredFunc.CINFO)
     def giveroominfo(self, **kwargs):
         room =  Manager.getinstance().getatroom(self)
         if room is not None:
-            return room.details, None
+            return room.details, None, None
         else:
-            return "Error", None
+            return "Error", None, None
     
     @bizFuncServerReg(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
-        print(args, kwargs)
+        logging.debug(args, kwargs)
         room = Manager.getinstance().getatroom(self)
         self._chatroom = None
         if room is not None:
             room.leaveconn(self)
-            return "Leave the room", "Someone left the room"
+            return "Leave the room", f"{self._name} left the room", room._bc
         else:
-            return "Error, you are not at room", None
+            return "Error, you are not at room", None, None
         
         
     @bizFuncServerReg(RegisteredFunc.CEXIT)
     def disconnectserver(self, *args, **kwargs):
-        print(args, kwargs)
-        Manager.getinstance().disconn(self)
+        logging.debug(f"{args}, {kwargs}")
+        
         room = Manager.getinstance().getatroom(self)
+        Manager.getinstance().disconn(self)
+        
         if room is not None:
             room.leaveconn(self)
-            return "Disconnect with the server", "Someone left the room"
+            return "Disconnect with the server", f"{self._name} left the room", room._bc
         else:
-            return "Disconnect with the server", None
+            return "Disconnect with the server", None, None
         
     
         # if 'roomname' in package.get_data():
