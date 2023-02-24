@@ -4,3 +4,6 @@ __pycache__
 plugins
 tmp
 nohup*
+*egg-info
+dist
+build
