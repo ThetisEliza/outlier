@@ -6,16 +6,20 @@ FilePath: /outlier/src/manager.py
 '''
 import json
 
-PROJ_PATH = ""
 
 class Config:
     """
     config class
     """    
+    
     def __init__(self, **args):
-        with open(PROJ_PATH+"config/config.json") as f:
-            self.__dict__.update(json.load(f))
-            self.__dict__.update(args)
+        self.__dict__.update(args)
+        try:
+            with open(""+"config/config.json") as f:
+                self.__dict__.update(json.load(f))
+        except:
+            ...
+        
             
 
 

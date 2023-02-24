@@ -17,11 +17,11 @@ from typing import List
 
 import traceback
 
-from manager import Config
-from protocol import Package, Message
-from regdecorator import bizFuncServerReg, ServerClassReg
-from func import RegisteredFunc
-import utils
+from .manager import Config
+from .protocol import Package, Message
+from .regdecorator import bizFuncServerReg, ServerClassReg
+from .func import RegisteredFunc
+from .utils import init_logger, getConnectAddr
 
 
 '''
@@ -387,8 +387,9 @@ def main():
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
     argparse.add_argument("-lh", "--loghandler", default=None, type=str)
     args = argparse.parse_args()
-    conf = Config(**{"log": args.log, "loghandler": args.loghandler})
-    utils.init_logger(conf.log, filehandlename=conf.loghandler)
+    conf = Config(**{"log": args.log, "loghandler": args.loghandler, "ip": getConnectAddr(), "port": 8899})
+    
+    init_logger(conf.log, filehandlename=conf.loghandler)
     
     sm = ServerListener(conf)
     sm.start()
