@@ -10,7 +10,7 @@ Functions Frame
 '''
 import time
 
-from protocol import Package
+from .protocol import Package
 
 def nop(*args, **kwargs):
     time.sleep(0.1)

@@ -16,7 +16,7 @@ This is a simple chat-room for you to communicate with others
 11.16 
 - initialize the project
 
-XXX
+11.xx
 - where was my development logs ? 
 
 12.01 
@@ -38,3 +38,7 @@ XXX
 - I finished all the basic functions in both server and client
 - Finished the Decorator Structure to register bussiness functions on both server and client
 - Some Efforts are still required to make it cleaner and more beautiful
+
+
+2.24
+- I pushed it to pypi ~! See: [https://pypi.org/project/outlierchat/]

@@ -1,20 +1,24 @@
 '''
-Date: 2023-01-10 11:20:45
+Date: 2022-11-16 16:59:28
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-11 14:39:37
-FilePath: /outlier/src/_client.py
+LastEditTime: 2023-01-10 18:07:52
+FilePath: /outlier/src/client.py
 '''
 
+from argparse import ArgumentParser    
+
+
 import socket
-import time
 import sys
 import logging
 import re
 from threading import Thread
 
-from protocol import Package, Command, Message
-from regdecorator import bizFuncClientRequestReg, bizFuncClientRecallReg, ClientClassReg
-from func import RegisteredFunc, State
+from .protocol import Package, Message
+from .regdecorator import bizFuncClientRequestReg, bizFuncClientRecallReg, ClientClassReg
+from .func import RegisteredFunc, State
+from .utils import init_logger
+from .manager import Config
 
 from typing import List
 import platform
@@ -196,3 +200,23 @@ class Client:
                     logging.debug(f"check interact cmd {cmd_}, func_ {func}, inputinfo {inputinfo}, inputs {inputs}")
                     func.clientaction(self, inputinfo=inputinfo, sendarg=inputs)
                     
+
+       
+        
+def main():
+    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
+    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-n", "--name", required=True, type=str)
+    argparse.add_argument("-a", "--addr", required=True, type=str)
+    argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
+    args = argparse.parse_args()
+    
+    conf = Config(**{"log": args.log, "username": args.name, "ip": args.addr, "port": args.port})
+    init_logger(conf.log.upper())
+    Client(conf)
+    
+    
+
+    
+if __name__ == '__main__':
+    main()

@@ -1,27 +1,12 @@
 '''
 Date: 2023-01-07 22:59:34
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-01-11 10:22:28
+LastEditTime: 2023-01-17 17:27:55
 FilePath: /outlier/src/protocol.py
 '''
 import json
 import hashlib
 from datetime import datetime
-
-class Command:
-    FETCH = "fetch"
-    SYNC  = "sync"
-    DS    = "disconnect"
-    INFO  = "info"
-    ROOM  = "room"
-    
-    RET   = "_ret"
-    
-    FETCH_RET   = FETCH + RET
-    SYNC_RET    = SYNC + RET
-    DS_RET      = DS + RET
-    INFO_RET    = INFO + RET
-    ROOM_RET    = ROOM + RET
 
 
 KEY = "asdqwezxc"
