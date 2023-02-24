@@ -8,14 +8,13 @@ I found `python` is really hard to write a project. It's too flexiable to organi
 '''
 
 import socket
-from threading import Thread
 import time
 import logging
+import traceback
 from queue import Queue
 from argparse import ArgumentParser
+from threading import Thread
 from typing import List
-
-import traceback
 
 from .manager import Config
 from .protocol import Package, Message
@@ -94,9 +93,9 @@ class Manager:
     def getinstanceTest():
         if Manager.instance is None:
             Manager.instance = Manager()
-            Manager.instance.rooms.append(ChatRoom(1))
-            Manager.instance.rooms.append(ChatRoom(2))
-            Manager.instance.rooms.append(ChatRoom(3))
+            Manager.instance.rooms.append(ChatRoom('Alpha'))
+            Manager.instance.rooms.append(ChatRoom('Beta'))
+            Manager.instance.rooms.append(ChatRoom('Charlie'))
         return Manager.instance
     
     def getroom(self, name) -> ChatRoom:
@@ -386,8 +385,10 @@ def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
     argparse.add_argument("-lh", "--loghandler", default=None, type=str)
+    argparse.add_argument("-a", "--addr", required=False, type=str)
+    argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
     args = argparse.parse_args()
-    conf = Config(**{"log": args.log, "loghandler": args.loghandler, "ip": getConnectAddr(), "port": 8899})
+    conf = Config(**{"log": args.log, "loghandler": args.loghandler, "ip": getConnectAddr(), "port": args.port})
     
     init_logger(conf.log, filehandlename=conf.loghandler)
     

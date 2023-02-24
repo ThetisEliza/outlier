@@ -9,7 +9,6 @@ from argparse import ArgumentParser
 
 
 import socket
-import time
 import sys
 import logging
 import re
@@ -209,7 +208,7 @@ def main():
     argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
     argparse.add_argument("-n", "--name", required=True, type=str)
     argparse.add_argument("-a", "--addr", required=True, type=str)
-    argparse.add_argument("-p", "--port", required=False, type=int)
+    argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
     args = argparse.parse_args()
     
     conf = Config(**{"log": args.log, "username": args.name, "ip": args.addr, "port": args.port})
