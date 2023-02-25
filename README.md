@@ -29,6 +29,22 @@ Install with pip
 pip install outlierchat
 ```
 
+## Quick tour
+
+After setup. You can start a server just start the module outlier.server as
+```python
+python -m outlier.server [-a addr]
+```
+
+Then you and your friends cat easily connect to the server. Just type
+```python
+python -m outlier.client -n name [-a addr]
+```
+
+After connected, it's easy to regard it as an online game system. The client firstly is 
+at the server hall where one can type $info to check what rooms there exist and
+how many people are in it. Then type $room [room name] to choose one room or build a new one to enter it and you can easily send and receive messages with your friends.
+
 ## Development log
 
 See [DEVLOG.md](https://github.com/ThetisEliza/outlier/DEVLOG.md)
