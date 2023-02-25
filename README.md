@@ -8,19 +8,15 @@
 
 ## Instruction
 
-This is a simple chat-room for you to communicate with your friends.
-
 Are you mad or bothered by wanna
 
-* Chatting with your friends but your boss standing behind you?
+* Chat with your friends but your boss standing behind you?
 * Tell some secret about boss or company you serve but your computer and network is under survellience?
 * Make some import decisions with nobody finding out?
 
-Try this outlier tool !
+Try this outlier chat room !
 
-Outlier, known as the famous movie, standing for the people that are active out of meaning "laws", with this tool,
-You can build a secret server really simply and quickly. And setup a client to connect to it. It's designed to use
-your own "Symmetic Encryption Algorithm" and setup a secret key to make your communication hardly to decryped.
+Outlier, known as the famous movie, standing for the people who act out of laws, is a simple tool for you to communicate with your friends. You can build a server really simply and quickly with it. And invite your friends to setup clients on it. It's designed to use your own "Symmetic Encryption Algorithm" and setup a secret key to make your communication hardly to decryped.
 
 ## Setup
 
@@ -36,18 +32,18 @@ After setup. You can start a server just start the module outlier.server as
 python -m outlier.server [-a addr]
 ```
 
-Then you and your friends cat easily connect to the server. Just type
+Then you and your friends cat easily connect to the server
 ```python
 python -m outlier.client -n name [-a addr]
 ```
 
 After connected, it's easy to regard it as an online game system. The client firstly is 
-at the server hall where one can type $info to check what rooms there exist and
-how many people are in it. Then type $room [room name] to choose one room or build a new one to enter it and you can easily send and receive messages with your friends.
+at the server hall where one can type `$info` to check what rooms there exist and
+how many people are in it. Then type `$room [room name]` to choose one room or build a new one to enter it and you can easily send and receive messages with your friends.
 
 ## Development log
 
-See [DEVLOG.md](https://github.com/ThetisEliza/outlier/DEVLOG.md)
+See [DEVLOG.md](https://github.com/ThetisEliza/outlier/blob/main/DEVLOG.md)
 
 
 
