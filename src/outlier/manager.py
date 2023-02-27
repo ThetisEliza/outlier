@@ -17,7 +17,7 @@ class Config:
         try:
             with open(""+"config/config.json") as f:
                 self.__dict__.update(json.load(f))
-        except:
+        except FileNotFoundError:
             ...
         
             

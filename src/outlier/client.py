@@ -5,23 +5,21 @@ LastEditTime: 2023-01-10 18:07:52
 FilePath: /outlier/src/client.py
 '''
 
-from argparse import ArgumentParser    
-
-
+import logging
+import platform
+import re
 import socket
 import sys
-import logging
-import re
+from argparse import ArgumentParser
 from threading import Thread
-
-from .protocol import Package, Message
-from .regdecorator import bizFuncClientRequestReg, bizFuncClientRecallReg, ClientClassReg
-from .func import RegisteredFunc, State
-from .utils import init_logger
-from .manager import Config
-
 from typing import List
-import platform
+
+from .func import RegisteredFunc, State
+from .manager import Config
+from .protocol import Message, Package
+from .regdecorator import (ClientClassReg, bizFuncClientRecallReg,
+                           bizFuncClientRequestReg)
+from .utils import init_logger
 
 
 @ClientClassReg

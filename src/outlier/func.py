@@ -9,8 +9,12 @@ FilePath: /outlier/src/func.py
 Functions Frame
 '''
 import time
+import re
+import inspect
+from typing import List, Tuple
 
 from .protocol import Package
+
 
 def nop(*args, **kwargs):
     time.sleep(0.1)
@@ -109,8 +113,7 @@ class FuncBase:
     def __repr__(self) -> str:
         return f"FuncBase:{self._cmd}"
 
-import re
-from typing import List, Tuple
+
 
 class RegisteredFunc:
     DEFAULT = FuncBase("NA", None, False)
@@ -157,7 +160,7 @@ class RegisteredFunc:
         
         
 
-import inspect
+
 
 for name, a in inspect.getmembers(RegisteredFunc):
     if type(a) == FuncBase:

@@ -4,14 +4,24 @@ LastEditors: ThetisEliza wxf199601@gmail.com
 LastEditTime: 2023-01-17 17:27:55
 FilePath: /outlier/src/protocol.py
 '''
-import json
 import hashlib
+import json
 from datetime import datetime
-
 
 KEY = "asdqwezxc"
 
-def get_round_time(timestamp):
+
+
+def get_round_time(timestamp: float) -> str:
+    """This is to convert timestamp gap to a human-readable time gap
+    such as `1 days ago`, `1 hours ago` etc.
+
+    Args:
+        timestamp (float): target timestamp
+
+    Returns:
+        str: time gap
+    """
     curr = datetime.now()
     happening = datetime.fromtimestamp(timestamp)
     delta = curr - happening
@@ -76,48 +86,49 @@ class Encrption:
             out.append(b)
         return out.decode('ascii')
 
+
 class Package:
     def __init__(self, **data) -> None:
         self.data = data
         self.byteflow: bytes = None
 
-    def add_field(self, field: str, value):
+    def add_field(self, field: str, value) -> 'Package':
         self.data[field] = value
         return self
     
-    def add_field_if(self, condition: bool, field: str, value):
+    def add_field_if(self, condition: bool, field: str, value) -> 'Package':
         if condition:
             self.data[field] = value
         return self
     
-    def add_cmd(self, cmd: str):
+    def add_cmd(self, cmd: str) -> 'Package':
         self.data["cmd"] = cmd
         return self
     
-    def encrypt(self):
+    def encrypt(self) -> 'Package':
         try:
             data = json.dumps(self.data)
             self.byteflow = Encrption.entrypt(data)
-        except Exception as e:
+        except json.JSONDecodeError as e:
             ...
         return self
     
-    def decrypt(self):
+    def decrypt(self) -> 'Package':
         try:
             data = Encrption.decrypt(self.byteflow)
             self.data = json.loads(data)
-        except Exception as e:
+        except json.JSONDecodeError as e:
             self.data = {}
         return self
     
     def get_byteflow(self) -> bytes:
         return self.byteflow
     
-    def set_byteflow(self, byteflow):
+    def set_byteflow(self, byteflow) -> 'Package':
         self.byteflow = byteflow
         return self
     
-    def get_data(self):
+    def get_data(self) -> dict:
         return self.data
     
     def tobyteflow(self) -> bytes:
@@ -126,7 +137,7 @@ class Package:
     def __repr__(self) -> str:
         return f"data:{self.data}, bytes:{self.byteflow}"  
     
-    def view(self, isbtyesrepr=False):
+    def view(self, isbtyesrepr=False) -> 'Package':
         if isbtyesrepr:
             print(repr(self))
         else:
@@ -134,10 +145,10 @@ class Package:
         return self
     
     @staticmethod
-    def buildpackage():
+    def buildpackage() -> 'Package':
         return Package().add_field("timestamp",  datetime.timestamp(datetime.now()))
     
     @staticmethod
-    def parsebyteflow(byteflow: bytes):
+    def parsebyteflow(byteflow: bytes) -> 'Package':
         return Package().set_byteflow(byteflow).decrypt()
     

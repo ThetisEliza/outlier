@@ -7,26 +7,28 @@ FilePath: /outlier/src/server.py
 I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
 '''
 
+import logging
 import socket
 import time
-import logging
 import traceback
-from queue import Queue
 from argparse import ArgumentParser
+from queue import Queue
 from threading import Thread
-from typing import List
+from typing import List, Tuple
 
-from .manager import Config
-from .protocol import Package, Message
-from .regdecorator import bizFuncServerReg, ServerClassReg
 from .func import RegisteredFunc
-from .utils import init_logger, getConnectAddr
-
+from .manager import Config
+from .protocol import Message, Package
+from .regdecorator import ServerClassReg, bizFuncServerReg
+from .utils import getConnectAddr, init_logger, retry_process
 
 '''
 Chat room
 '''
 class ChatRoom:
+    """TODO @ThetisEliza
+    We should give this one a more abstract concept.
+    """
     def __init__(self, name) -> None:
         self.history    = []
         self.connects   = []
@@ -73,6 +75,13 @@ We can use this class to manage chat status, maybe release some unused channel,
 saving or loading chat history and something else.
 '''
 class Manager:
+    
+    """TODO  @ThetisEliza
+    We can use __new__ to simplify the pattern
+
+    And I don't know whether the inferfaces are too many
+    """
+    
     instance = None
     
     def __init__(self) -> None:
@@ -143,14 +152,15 @@ class Manager:
     def refreshdetails(self):
         while True:
             logging.info(f"Routing detail check {self.getdetails()}")
-            time.sleep(5)
+            time.sleep(60)
         
         
-'''
-I guess we should try a more specific pattern where an individual listener should
-be departed from server
-'''
+
 class ServerListener:
+    """TODO @ThetisEliza
+    This module I guess, is better to be apart to the manager.
+    Or use some better pattern to inject in it.
+    """
     def __init__(self, conf) -> None:
         self._conf   = conf
         self._sock   = socket.socket()
@@ -179,13 +189,18 @@ class ServerListener:
         
         while not self._stop:
             logging.info("waiting for connection")
-            conn, addr = self._sock.accept()
+            (conn, addr):Tuple[socket.socket, socket._RetAddress] = self._sock.accept()
             clientconn = ClientConn(conn, addr)
             self._manager.newconn(clientconn)
-
-        
-
+            
+            
 class Broadcaster:
+    """
+    TODO @ThetisEliza
+    This part maybe has no individual meaning besides -> Chat room
+    we could consider combining them together?
+    
+    """
     def __init__(self, conns) -> None:
         self._stop = False
         self.syncqueue  = Queue()
@@ -220,9 +235,22 @@ class Broadcaster:
         
 
 
+
 @ServerClassReg
 class ClientConn:
-    def __init__(self, conn, addr) -> None:
+    """
+    TODO @ThetisEliza
+    This connection and the client connection has too many common parts.
+    We should extract a more general class
+    
+    _send
+    _recv
+    _communicationloop
+    
+    And it's better to extract biz funcs into a more specific place.
+    """
+    
+    def __init__(self: 'ClientConn', conn:socket.socket, addr:socket._RetAddress) -> None:
         self._conn = conn
         self._addr = addr
         self._connthread = Thread(target=self._connLoop)
@@ -247,20 +275,16 @@ class ClientConn:
         """
         This is the loop for client to maintain the connection.
         """
-        errortime = 0
-        while True:
-            try:
-                logging.info(f"prepare to receive , time {errortime}")
-                if errortime > 3:
-                    break
-                if self.process_package(*self._recv()) == -1:
-                    break   
-                errortime = 0                
-            except Exception as e:
-                traceback.logging.debug_exc()
-                logging.warning(e)
-                time.sleep(1)
-                errortime += 1    
+        def func():
+            logging.info(f"prepare to receive")
+            return self.process_package(*self._recv())
+                
+        def failedfunc(e: Exception):
+            traceback.logging.debug_exc()
+            logging.warning(e)
+            time.sleep(1)
+        
+        retry_process(func, (), failedfunc, (), 3)
         self._deactivate()
             
 
@@ -293,13 +317,7 @@ class ClientConn:
             func.serveraction(self, **package.get_data())
     
     
-    
-    
-    # Maybe later we can use `decorator` to register server function on FUNCTIONS CONFIGURed in func.py
-    # Such as `@BIZREG("INFO")`
-    
-    # Biz Segment
-    
+        
     @bizFuncServerReg(RegisteredFunc.INFO)
     def giveinfo(self, *args, **kwargs):
         logging.debug(args, kwargs)

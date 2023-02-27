@@ -4,11 +4,10 @@ LastEditors: ThetisEliza wxf199601@gmail.com
 LastEditTime: 2023-01-10 18:08:13
 FilePath: /outlier/src/regdecorator.py
 '''
-import logging
-from .func import FuncBase, State
-
 import inspect
+import logging
 
+from .func import FuncBase, State
 
 # Server Decorators
 
