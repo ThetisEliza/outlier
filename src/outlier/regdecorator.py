@@ -7,35 +7,41 @@ FilePath: /outlier/src/regdecorator.py
 import inspect
 import logging
 
-from .func import FuncBase, State
+from .func import FuncBase
 
-# Server Decorators
 
-def bizFuncServerReg(*bizfunc: FuncBase):
+def serverbizfunc(*bizfunc: FuncBase):
+    """
+    This decorator is to regesiter bizfuncs on server, to response the request from client
+    """
     def inner(fn):
         def decorate(*args, **kwargs):
-            ret = fn(*args, **kwargs)
-            return ret
-        # Here is the final decoratored function print(decorate)
+            return fn(*args, **kwargs)
         decorate.tag = bizfunc
         return decorate
     return inner
 
 
-def ServerClassReg(cls: type):
-    print("Server register bussiness functions")
+def Serverbiz(cls: type) -> type:
+    """
+    This decorator is to designate server class as the path to search for biz funcs
+    Args:
+        cls (type): _description_
+
+    Returns:
+        type: _description_
+    """
+    logging.info("Server register bussiness functions")
     for name, func in inspect.getmembers(cls, predicate=inspect.isfunction):
         if 'tag' in dir(func) and func.tag is not None:
-            for BizFunc in func.tag:
-                BizFunc._kwargs['servereffectaction'] = func
-                print(f"register fn {func} at {BizFunc} finished")
+            for bizfunc in func.tag:
+                bizfunc._kwargs['servereffectaction'] = func
+                logging.info(f"register fn {func} at {bizfunc} name {name} finished")
     return cls
 
 
 
-# Client Decorators
-
-def bizFuncClientRequestReg(*bizfunc: FuncBase):
+def clientbizfunreq(*bizfunc: FuncBase):
     def inner(fn):
         def decorate(*args, **kwargs):
             ret = fn(*args, **kwargs)
@@ -45,7 +51,7 @@ def bizFuncClientRequestReg(*bizfunc: FuncBase):
         return decorate
     return inner
 
-def bizFuncClientRecallReg(*bizfunc: FuncBase):
+def clientbizfuncrecall(*bizfunc: FuncBase):
     def inner(fn):
         def decorate(*args, **kwargs):
             ret = fn(*args, **kwargs)
@@ -56,7 +62,7 @@ def bizFuncClientRecallReg(*bizfunc: FuncBase):
     return inner
 
 
-def ClientClassReg(cls: type):
+def Clientbiz(cls: type):
     logging.debug("Client register bussiness functions")
     for name, func in inspect.getmembers(cls, predicate=inspect.isfunction):
         if 'localactiontag' in dir(func) and func.localactiontag is not None:

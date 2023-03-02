@@ -4,7 +4,7 @@ LastEditors: ThetisEliza wxf199601@gmail.com
 LastEditTime: 2023-01-17 17:27:59
 FilePath: /outlier/src/server.py
 
-I found `python` is really hard to write a project. It's too flexiable to organize the structure ...
+`Server module`
 '''
 
 import logging
@@ -19,12 +19,10 @@ from typing import List, Tuple
 from .func import RegisteredFunc
 from .manager import Config
 from .protocol import Message, Package
-from .regdecorator import ServerClassReg, bizFuncServerReg
-from .utils import getConnectAddr, init_logger, retry_process
+from .regdecorator import Serverbiz, serverbizfunc
+from .utils import get_connect_addr, init_logger, retry_process
 
-'''
-Chat room
-'''
+
 class ChatRoom:
     """TODO @ThetisEliza
     We should give this one a more abstract concept.
@@ -70,10 +68,7 @@ class ChatRoom:
         return f"{'name':10}\t{'LOCK'}\tpeople\tmsg"
         
 
-'''
-We can use this class to manage chat status, maybe release some unused channel,
-saving or loading chat history and something else.
-'''
+
 class Manager:
     
     """TODO  @ThetisEliza
@@ -192,7 +187,7 @@ class ServerListener:
             (conn, addr):Tuple[socket.socket, socket._RetAddress] = self._sock.accept()
             clientconn = ClientConn(conn, addr)
             self._manager.newconn(clientconn)
-            
+    
             
 class Broadcaster:
     """
@@ -236,7 +231,7 @@ class Broadcaster:
 
 
 
-@ServerClassReg
+@Serverbiz
 class ClientConn:
     """
     TODO @ThetisEliza
@@ -318,13 +313,13 @@ class ClientConn:
     
     
         
-    @bizFuncServerReg(RegisteredFunc.INFO)
+    @serverbizfunc(RegisteredFunc.INFO)
     def giveinfo(self, *args, **kwargs):
         logging.debug(args, kwargs)
         return Manager.getinstanceTest().getinfo() + f"\n At Room: {self._chatroom._name if self._chatroom else None}", None, None
     
     
-    @bizFuncServerReg(RegisteredFunc.ROOM)
+    @serverbizfunc(RegisteredFunc.ROOM)
     def changeroom(self, **kwargs):
         logging.debug("args:", kwargs)
         username = kwargs.get('username')
@@ -346,7 +341,7 @@ class ClientConn:
             return f"You entered the room {room._name}", f"{username} entered the room", room._bc
     
     
-    @bizFuncServerReg(RegisteredFunc.EXIT)
+    @serverbizfunc(RegisteredFunc.EXIT)
     def exit(self, **kwargs):
         logging.debug("args", kwargs)
         Manager.getinstance().disconn(self)
@@ -354,7 +349,7 @@ class ClientConn:
         
     
     
-    @bizFuncServerReg(RegisteredFunc.CHAT)    
+    @serverbizfunc(RegisteredFunc.CHAT)    
     def chat(self, *args, **kwargs):
         logging.debug(args, kwargs)
         cmd = kwargs.get("cmd", "")
@@ -365,7 +360,7 @@ class ClientConn:
         return bcmsg, bcmsg, room._bc
     
     
-    @bizFuncServerReg(RegisteredFunc.CINFO)
+    @serverbizfunc(RegisteredFunc.CINFO)
     def giveroominfo(self, **kwargs):
         room =  Manager.getinstance().getatroom(self)
         if room is not None:
@@ -373,7 +368,7 @@ class ClientConn:
         else:
             return "Error", None, None
     
-    @bizFuncServerReg(RegisteredFunc.CLEAVE)
+    @serverbizfunc(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
         logging.debug(args, kwargs)
         room = Manager.getinstance().getatroom(self)
@@ -385,7 +380,7 @@ class ClientConn:
             return "Error, you are not at room", None, None
         
         
-    @bizFuncServerReg(RegisteredFunc.CEXIT)
+    @serverbizfunc(RegisteredFunc.CEXIT)
     def disconnectserver(self, *args, **kwargs):
         logging.debug(f"{args}, {kwargs}")
         
@@ -406,7 +401,7 @@ def main():
     argparse.add_argument("-a", "--addr", required=False, type=str)
     argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
     args = argparse.parse_args()
-    conf = Config(**{"log": args.log, "loghandler": args.loghandler, "ip": getConnectAddr(), "port": args.port})
+    conf = Config(**{"log": args.log, "loghandler": args.loghandler, "ip": get_connect_addr(), "port": args.port})
     
     init_logger(conf.log, filehandlename=conf.loghandler)
     

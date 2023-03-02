@@ -11,18 +11,19 @@ import re
 import socket
 import sys
 from argparse import ArgumentParser
+from select import epoll
 from threading import Thread
 from typing import List
 
 from .func import RegisteredFunc, State
 from .manager import Config
 from .protocol import Message, Package
-from .regdecorator import (ClientClassReg, bizFuncClientRecallReg,
-                           bizFuncClientRequestReg)
+from .regdecorator import (Clientbiz, clientbizfuncrecall,
+                           clientbizfunreq)
 from .utils import init_logger
 
 
-@ClientClassReg
+@Clientbiz
 class Client:
         
     def __init__(self, conf):
@@ -57,7 +58,7 @@ class Client:
         return ret
         
     
-    @bizFuncClientRecallReg(RegisteredFunc.INFO)
+    @clientbizfuncrecall(RegisteredFunc.INFO)
     def showinfomsg(self, *args, **kwargs):
         logging.debug(args, kwargs)
         
@@ -69,7 +70,7 @@ class Client:
         
         
         
-    @bizFuncClientRecallReg(RegisteredFunc.ROOM)
+    @clientbizfuncrecall(RegisteredFunc.ROOM)
     def showroommsg(self, *args, **kwargs):
         for arg in args:
             if arg is not None:
@@ -77,13 +78,13 @@ class Client:
         
                 
                 
-    @bizFuncClientRecallReg(RegisteredFunc.EXIT, RegisteredFunc.CEXIT)
+    @clientbizfuncrecall(RegisteredFunc.EXIT, RegisteredFunc.CEXIT)
     def exit(self, *args, **kwargs):
         logging.debug("exit program")
         exit(0)
         
     
-    @bizFuncClientRecallReg(RegisteredFunc.CHAT)
+    @clientbizfuncrecall(RegisteredFunc.CHAT)
     def recvmsg(self, *args, **kwargs):
         logging.debug(f"recved msg {args} {kwargs}")
         messagedata = kwargs.get("bc")
@@ -96,7 +97,7 @@ class Client:
                 message = Message.parse(**m)
                 self._msgbuffer.append(message)
     
-    @bizFuncClientRecallReg(RegisteredFunc.CINFO)
+    @clientbizfuncrecall(RegisteredFunc.CINFO)
     def showroominfomsg(self, *args, **kwargs):
         logging.debug(args, kwargs)
         
@@ -107,7 +108,7 @@ class Client:
         print(self.localInfo)
     
     
-    @bizFuncClientRecallReg(RegisteredFunc.CLEAVE)
+    @clientbizfuncrecall(RegisteredFunc.CLEAVE)
     def exitroom(self, *args, **kwargs):
         logging.debug(f"recved msg {args} {kwargs}")
         for arg in args:
@@ -115,14 +116,14 @@ class Client:
                 print(arg)
         
         
-    @bizFuncClientRequestReg(RegisteredFunc.DEFAULT, RegisteredFunc.CHELP, RegisteredFunc.HELP)    
+    @clientbizfunreq(RegisteredFunc.DEFAULT, RegisteredFunc.CHELP, RegisteredFunc.HELP)    
     def showhelpmesg(self, *args, **kwargs):
         print("Supported commands:")
         for func in RegisteredFunc.FuncConfiguredList:
             if func._atstate == self._status:
                 print(f"{func._help}")
     
-    @bizFuncClientRequestReg(RegisteredFunc.CCLEAR)
+    @clientbizfunreq(RegisteredFunc.CCLEAR)
     def clearterminal(self, *args, **kwargs):
         import subprocess
         subprocess.call('reset')
@@ -209,8 +210,14 @@ def main():
     argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
     args = argparse.parse_args()
     
-    conf = Config(**{"log": args.log, "username": args.name, "ip": args.addr, "port": args.port})
+    conf = Config(**{"log": args.log, 
+                     "username": args.name, 
+                     "ip": args.addr, 
+                     "port": args.port})
+    
     init_logger(conf.log.upper())
+    
+    
     Client(conf)
     
     

@@ -8,9 +8,9 @@ FilePath: /outlier/src/func.py
 '''
 Functions Frame
 '''
-import time
-import re
 import inspect
+import re
+import time
 from typing import List, Tuple
 
 from .protocol import Package
@@ -157,11 +157,9 @@ class RegisteredFunc:
                 return func
         return RegisteredFunc.DEFAULT
         
+    
         
         
-
-
-
 for name, a in inspect.getmembers(RegisteredFunc):
     if type(a) == FuncBase:
         RegisteredFunc.FuncConfiguredList.append(a)

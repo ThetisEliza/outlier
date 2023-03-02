@@ -31,11 +31,22 @@ def init_logger(level, format=FORMAT, filehandlename=None):
             
 def retry_process(
         func: Callable[[Any], int], 
-        args,
+        args: Any,
         failedfunc: Callable[[Exception, Any], int], 
-        failedargs, 
+        failedargs: Any, 
         uppertimers:int
     ) -> None:
+    """
+    This is a basic retry frame for process.
+
+    Args:
+        func (Callable[[Any], int]): _description_
+        args (Any): _description_
+        failedfunc (Callable[[Exception, Any], int]): _description_
+        failedargs (Any): _description_
+        uppertimers (int): _description_
+    """
+
     
     errortime = 0
     while True:
@@ -52,7 +63,7 @@ def retry_process(
         
     
 
-def getConnectAddr() -> str:
+def get_connect_addr() -> str:
     """This function is to check the ipaddress that a host should be bind
 
     Returns:
@@ -66,9 +77,4 @@ def getConnectAddr() -> str:
 
 
 
-class A:
-    ins = None
-    def __new__(cls: 'A') -> 'A':
-        if A.ins is None:
-            A.ins =  super().__new__(cls)
-        return A.ins    
+
