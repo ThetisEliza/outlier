@@ -4,7 +4,6 @@ from datetime import datetime
 
 KEY = "asdqwezxc"
 
-
 class Encrption:    
     def entrypt(data:str, key=KEY) -> bytes:
         hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
@@ -26,8 +25,9 @@ class Encrption:
         return out.decode('ascii')
     
 class Package:
-    CMD = "cmd"
-    TIME = "timestamp"
+    
+    CMD     = "cmd"
+    TIME    = "timestamp"
     
     def __init__(self, **data) -> None:
         self.data = data

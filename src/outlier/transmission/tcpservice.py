@@ -1,6 +1,8 @@
+
 import socket
 import select
 import time
+from enum import Enum
 from dataclasses import dataclass
 from typing import Callable, Any, List, Tuple, Dict
 from tools.threadpool import ThreadPool
@@ -12,30 +14,37 @@ class Connection:
     sock: socket.socket
     addr: Any
 
+class Ops(Enum):
+    Add = 0
+    Rmv = 1
+    Rcv = 2
+    
 
 class TcpService:
     """This service is to use epoll to provide a bi-direction
     tcp channel, we hope it can be general for both the server and
     the client
     """
-    def __init__(self, conf, is_block: bool = False, recvrchd = None) -> None:
+    def __init__(self, conf, is_block: bool = False) -> None:
         self.sock = socket.socket()
         self.epctl = select.epoll()
         self.threadpool = ThreadPool()           
         self.is_block = is_block
         self.conf = conf
         self.loop = True
-        self.__recvrchd: Callable = recvrchd
+        self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = None
             
     def send(self, msg: bytes, conn: Connection = None):
         ...
         
-    def set_recvrchd(self, recvrchd: Callable):
-        self.__recvrchd = recvrchd
+    def get_all_conns(self) -> List[Connection]:
+        return list()
         
-    def recvhandle(self, msg: bytes, conn: Connection, *args):
-        if self.__recvrchd:
-            self.__recvrchd(msg, conn, *args)
+    def set_upper_rchandle(self, upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any]):
+        self.upper_rchandle = upper_rchandle
+    
+    def _rchandle(self, ops: Ops, conn: Connection, fd:int = -1, msg: bytes = None, *args):
+        ...
         
         
     def _loop(self):
@@ -62,17 +71,22 @@ class TcpListenService(TcpService):
         super().__init__(conf, is_block)
         self.conns: Dict[int, Connection] = dict()
         
-    def _add_conn(self, fd:int, conn: Connection):
-        self.conns[fd] = conn
-        self.epctl.register(conn.sock, select.EPOLLIN)
         
-    def _close_conn(self, fd:int, conn: Connection = None):
-        try:
-            conn = self.conns.get(fd)
-            conn.sock.close()
-        finally:
-            del self.conns[fd]
-        print(f"close {conn}")    
+    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, msg: bytes = None, *args):
+        if ops == Ops.Add:
+            self.conns[fd] = conn
+            self.epctl.register(conn.sock, select.EPOLLIN)
+        elif ops == Ops.Rmv:
+            try:
+                conn = self.conns.get(fd)
+                conn.sock.close()
+            finally:
+                del self.conns[fd]
+            print(f"close {conn}")    
+        elif ops == Ops.Rcv:
+            ...
+        if self.upper_rchandle is not None:
+            self.upper_rchandle(ops, conn, msg, *args)
     
     def _loop(self):
         ssock = self.sock
@@ -89,16 +103,16 @@ class TcpListenService(TcpService):
             for fd, _ in events:
                 if fd == ssock.fileno():
                     sock, addr = ssock.accept()
-                    self.threadpool.put_task(self._add_conn, args=(sock.fileno(), Connection(sock, addr)))                    
+                    self.threadpool.put_task(self._rchandle, args=(Ops.Add, Connection(sock, addr), sock.fileno()))
                 else:
                     try:
                         conn = self.conns[fd]
                         msg = conn.sock.recv(1024)
                         if len(msg) == 0:
                             raise ConnectionAbortedError()
-                        self.threadpool.put_task(self.recvhandle, args=(msg, conn))
+                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, conn, fd, msg))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
-                        self._close_conn(fd)
+                        self._rchandle(Ops.Rmv, conn, fd)
                     except KeyError:
                         print(f"Conn fd {fd} not found, ignore")
     
@@ -108,6 +122,9 @@ class TcpListenService(TcpService):
     def send(self, msg: bytes, conn: Connection = None):
         if conn:
             conn.sock.send(msg)
+            
+    def get_all_conns(self) -> List[Connection]:
+        return list(self.conns.values())
                         
     @onexit
     def close(self, *args):
@@ -138,7 +155,7 @@ class TcpConnectService(TcpService):
                         msg = self.sock.recv(1024)
                         if len(msg) == 0:
                             raise ConnectionAbortedError()
-                        self.threadpool.put_task(self.recvhandle, args=(msg, self.conn))
+                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, msg))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         print("server failed")
                         self.close()
@@ -147,7 +164,14 @@ class TcpConnectService(TcpService):
                         
         # if self.__reconnect(self.conf.ip, self.conf.port, retry_time=30) < 0:
     
-                            
+
+    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, msg: bytes = None, *args):
+        
+        if ops == Ops.Rcv:
+            print(msg)
+        if self.upper_rchandle is not None:
+            self.upper_rchandle(ops, conn, msg, *args)
+
     def __reconnect(self, ip:str, port:int, retry_time=None):
         import time
         retry = 1 if retry_time is None else retry_time

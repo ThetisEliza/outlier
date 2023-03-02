@@ -17,7 +17,7 @@ ss = ServerSessService(ts)
 
 import signal
 signal.signal(signal.SIGINT, ts.close)
-
+ss.send
 input()
 
 
