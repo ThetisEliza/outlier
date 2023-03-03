@@ -34,21 +34,29 @@ class TcpService:
         self.loop = True
         self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = None
             
-    def send(self, msg: bytes, conn: Connection = None):
-        ...
-        
-    def get_all_conns(self) -> List[Connection]:
-        return list()
+    def send(self, byteflow: bytes, conn: Connection = None):
+        """Actively send message to connection
+
+        Args:
+            byteflow (bytes): data
+            conn (Connection, optional): connection.
+        """
+        if conn:
+            conn.sock.send(byteflow)
         
     def set_upper_rchandle(self, upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any]):
+        """This is provided for upper service to invoke recall funcion.
+        Invoked at the time when socket received buffer data.
+        Args:
+            upper_rchandle (Callable[[Ops, Connection, bytes, Any], Any]): The func to be invoked by upper layer.
+        """
         self.upper_rchandle = upper_rchandle
     
-    def _rchandle(self, ops: Ops, conn: Connection, fd:int = -1, msg: bytes = None, *args):
-        ...
-        
+    def _rchandle(self, ops: Ops, conn: Connection, fd:int = -1, byteflow: bytes = None, *args):
+        pass 
         
     def _loop(self):
-        ...
+        pass
         
     def _startloop(self):
         if self.is_block:
@@ -72,7 +80,7 @@ class TcpListenService(TcpService):
         self.conns: Dict[int, Connection] = dict()
         
         
-    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, msg: bytes = None, *args):
+    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
         if ops == Ops.Add:
             self.conns[fd] = conn
             self.epctl.register(conn.sock, select.EPOLLIN)
@@ -86,7 +94,7 @@ class TcpListenService(TcpService):
         elif ops == Ops.Rcv:
             ...
         if self.upper_rchandle is not None:
-            self.upper_rchandle(ops, conn, msg, *args)
+            self.upper_rchandle(ops, conn, byteflow, *args)
     
     def _loop(self):
         ssock = self.sock
@@ -107,10 +115,10 @@ class TcpListenService(TcpService):
                 else:
                     try:
                         conn = self.conns[fd]
-                        msg = conn.sock.recv(1024)
-                        if len(msg) == 0:
+                        byteflow = conn.sock.recv(1024)
+                        if len(byteflow) == 0:
                             raise ConnectionAbortedError()
-                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, conn, fd, msg))
+                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, conn, fd, byteflow))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         self._rchandle(Ops.Rmv, conn, fd)
                     except KeyError:
@@ -119,13 +127,7 @@ class TcpListenService(TcpService):
     def startlistenloop(self):
         self._startloop()
         
-    def send(self, msg: bytes, conn: Connection = None):
-        if conn:
-            conn.sock.send(msg)
-            
-    def get_all_conns(self) -> List[Connection]:
-        return list(self.conns.values())
-                        
+        
     @onexit
     def close(self, *args):
         for fd in self.conns:
@@ -140,6 +142,10 @@ class TcpConnectService(TcpService):
     def __init__(self, conf, is_block: bool) -> None:
         super().__init__(conf, is_block)
         
+        
+    def startconnectloop(self):
+        self._startloop()
+        
     
     def _loop(self):
         # if self.__reconnect(self.conf.ip, self.conf.port, retry_time=30) < 0:
@@ -152,10 +158,10 @@ class TcpConnectService(TcpService):
             for fd, _ in events:
                 if fd == self.sock.fileno():
                     try:
-                        msg = self.sock.recv(1024)
-                        if len(msg) == 0:
+                        byteflow = self.sock.recv(1024)
+                        if len(byteflow) == 0:
                             raise ConnectionAbortedError()
-                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, msg))
+                        self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, byteflow))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         print("server failed")
                         self.close()
@@ -165,12 +171,12 @@ class TcpConnectService(TcpService):
         # if self.__reconnect(self.conf.ip, self.conf.port, retry_time=30) < 0:
     
 
-    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, msg: bytes = None, *args):
+    def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
         
         if ops == Ops.Rcv:
-            print(msg)
+            print(byteflow)
         if self.upper_rchandle is not None:
-            self.upper_rchandle(ops, conn, msg, *args)
+            self.upper_rchandle(ops, conn, byteflow, *args)
 
     def __reconnect(self, ip:str, port:int, retry_time=None):
         import time
@@ -188,15 +194,10 @@ class TcpConnectService(TcpService):
         print('reconnction failed')
         return -1
     
-    def suspend(self):
+    def __suspend(self):
         self.sock.close()
         self.threadpool.close()
         self.loop = False
     
-    def startconnectloop(self):
-        self._startloop()
+
         
-    def send(self, msg: bytes, conn: Connection = None):
-        self.sock.send(msg)
-
-

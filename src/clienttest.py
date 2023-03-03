@@ -1,5 +1,5 @@
 from transmission.tcpservice import TcpConnectService
-from session.sessionservice import ClientSessService
+from session.sessionservice import ClientSessService, Package
 
 class Conf:
     ...
@@ -19,5 +19,5 @@ import signal
 signal.signal(signal.SIGINT, ts.close)
 while True:
     a = input()
-    c.send(a.encode())
+    c.send(Package.buildpackage().add_field("message", a))
     

@@ -30,8 +30,7 @@ class Package:
     TIME    = "timestamp"
     
     def __init__(self, **data) -> None:
-        self.data = data
-        self.byteflow: bytes = None
+        self.data = data if data is not None else dict()
 
     def add_field(self, field: str, value) -> 'Package':
         self.data[field] = value
@@ -46,50 +45,43 @@ class Package:
         self.data[Package.CMD] = cmd
         return self
     
-    def encrypt(self) -> 'Package':
+    def encrypt(self) -> bytes:
         try:
             data = json.dumps(self.data)
-            self.byteflow = Encrption.entrypt(data)
+            return Encrption.entrypt(data)
         except json.JSONDecodeError as e:
-            ...
-        return self
-    
-    def decrypt(self) -> 'Package':
+            return b""
+        
+    @staticmethod
+    def decrypt(byteflow: bytes) -> 'Package':
         try:
-            data = Encrption.decrypt(self.byteflow)
-            self.data = json.loads(data)
+            data = Encrption.decrypt(byteflow)
+            data = json.loads(data)
+            return Package(**data)
         except json.JSONDecodeError as e:
-            self.data = {}
-        return self
-    
-    def get_byteflow(self) -> bytes:
-        return self.byteflow
-    
-    def set_byteflow(self, byteflow) -> 'Package':
-        self.byteflow = byteflow
-        return self
-    
-    def get_data(self) -> dict:
-        return self.data
-    
-    def tobyteflow(self) -> bytes:
-        return self.encrypt().get_byteflow()
-    
-    def __repr__(self) -> str:
-        return f"data:{self.data}, bytes:{self.byteflow}"  
-    
-    def view(self, isbtyesrepr=False) -> 'Package':
-        if isbtyesrepr:
-            print(repr(self))
-        else:
-            print(f"data:{self.data}")
-        return self
+            return Package()
     
     @staticmethod
     def buildpackage() -> 'Package':
         return Package().add_field(Package.TIME,  datetime.timestamp(datetime.now()))
     
-    @staticmethod
-    def parsebyteflow(byteflow: bytes) -> 'Package':
-        return Package().set_byteflow(byteflow).decrypt()
     
+    def __repr__(self) -> str:
+        return f"{self.data}"  
+    
+    def __getitem__(a, b):
+        return a.data.get(b, None)
+    
+    def __setitem__(a, b, c):
+        a.data[b] = c
+            
+    
+        
+    
+p = Package()
+# p['b'] = 2
+print(p['a'])
+print(p['b'])
+byteflow = p.encrypt()
+p2 = Package.decrypt(byteflow)
+print(p2)
