@@ -75,13 +75,9 @@ class Package:
     def __setitem__(a, b, c):
         a.data[b] = c
             
+    def get_field(self, item, default=None):
+        ret = self.data.get(item)
+        return ret if ret is not None else default
     
         
     
-p = Package()
-# p['b'] = 2
-print(p['a'])
-print(p['b'])
-byteflow = p.encrypt()
-p2 = Package.decrypt(byteflow)
-print(p2)

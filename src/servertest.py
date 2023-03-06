@@ -12,12 +12,11 @@ conf.port = 8809
 
 
 ts = TcpListenService(conf, False)
-ts.startlistenloop()
-
 ss = ServerSessService(ts)
 bs = ServerBizService(ss)
 
+ts.startlistenloop()
+
 import signal
 signal.signal(signal.SIGINT, ts.close)
-ss.send
 input()

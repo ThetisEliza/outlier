@@ -41,8 +41,9 @@ class TcpService:
             byteflow (bytes): data
             conn (Connection, optional): connection.
         """
-        if conn:
+        if conn:    
             conn.sock.send(byteflow)
+            
         
     def set_upper_rchandle(self, upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any]):
         """This is provided for upper service to invoke recall funcion.
@@ -152,7 +153,8 @@ class TcpConnectService(TcpService):
         #     return
         self.sock.connect((self.conf.ip, self.conf.port))
         self.conn = Connection(self.sock, None)
-        self.epctl.register(self.sock, select.EPOLLIN)            
+        self.epctl.register(self.sock, select.EPOLLIN)       
+             
         while self.loop:
             events = self.epctl.poll()
             for fd, _ in events:
@@ -174,7 +176,8 @@ class TcpConnectService(TcpService):
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
         
         if ops == Ops.Rcv:
-            print(byteflow)
+            # print(byteflow)
+            ...
         if self.upper_rchandle is not None:
             self.upper_rchandle(ops, conn, byteflow, *args)
 

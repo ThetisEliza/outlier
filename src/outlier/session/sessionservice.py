@@ -7,7 +7,7 @@ from .protocol import Package
 @dataclass
 class Session:
     conn: Connection = None
-    group: Set       = field(default_factory=set)
+    group: Set       = -1
 
 class SessionService:
     def __init__(self, service: TcpService) -> None:
@@ -48,7 +48,8 @@ class ServerSessService(SessionService):
         session = self._get_session(conn)
         package = self._convert_byteflow_to_package(byteflow)
         if ops == Ops.Add:
-            self.sesss.append(Session(conn))
+            session = Session(conn)
+            self.sesss.append(session)
         elif ops == Ops.Rcv:
             # self.send(package, session)
             ...
@@ -70,10 +71,9 @@ class ServerSessService(SessionService):
         super().send(session, package)
         if bcpackage:
             byteflow = self._convert_package_to_byteflow(bcpackage)
+            
             for other in self.sesss:
-                joined = session.group & other.group
-                joined.remove(-1)
-                if len(joined) > 0:
+                if other.group == session.group and other != session:
                     self.tsservice.send(byteflow, session.conn)
     
     
@@ -96,8 +96,12 @@ class ClientSessService(SessionService):
         
         
     def rchandle(self, ops: Ops, conn: Connection, byteflow: bytes = None, *args):
-        print(f"recv {byteflow}")
-        return super().rchandle(ops, byteflow, conn, *args)
+        # print(f"recv {byteflow}")
+        super().rchandle(ops, byteflow, conn, *args)
+        if self.upper_rchandle is not None:
+            session = Session(self.tsservice.conn)
+            package = self._convert_byteflow_to_package(byteflow)
+            self.upper_rchandle(ops, session, package, *args)
         
         
         
