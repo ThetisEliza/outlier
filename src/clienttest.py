@@ -1,6 +1,6 @@
 from transmission.tcpservice import TcpConnectService
-from session.sessionservice import ClientSessService, Package
-from biz.bizservice import ClientBizService, BizResponse
+from encryption.sessionservice import ConnectSessService, Package
+from biz.bizservice import Client, BizRequest
 
 class Conf:
     ...
@@ -12,21 +12,26 @@ conf.port = 8809
 import time
 
 ts = TcpConnectService(conf, False)
-ss = ClientSessService(ts)
-bs = ClientBizService(ss)
+ss = ConnectSessService(ts)
+bs = Client(ss)
 
+
+        
+    
 
 ts.startconnectloop()
 time.sleep(0.5)
 
 # ss.send(Package.buildpackage().add_field("cmd", "connectuser").add_field("name", "Alice"))
 
-bs.connectuser()
+bs.connect()
 
 
 import signal
-signal.signal(signal.SIGINT, ts.close)
+signal.signal(signal.SIGINT, ss.close)
+
 while True:
     a = input()
     bs.process_input(a)
+    # bs.process_input(a)
     

@@ -1,9 +1,10 @@
-from session.sessionservice import SessionService, Package, Session
+from encryption.sessionservice import SessionService, Package, Session
 from transmission.tcpservice import Ops
 from dataclasses import dataclass
 from typing import List, Any, Tuple, Generic, TypeVar, Callable, Dict, Union
 from enum import Enum
 import inspect
+import re
 
 
 
@@ -45,268 +46,242 @@ We have three phase in total.
 6. solve repsonse -> biz
 '''
 
-
 class State(Enum):
     IDLE = -1
     Hall = 0
     Room = 1
     Cfrm = 2
     
-
-@dataclass
-class BizReq:
-    cmd:        str = None
-    name:       str = None
-    param:      Any = None
     
-
-
-@dataclass
-class BizResponse:
-    response:   str = ""
-    bcresponse: str = None
-
-
-
-class ServerBizService:
-    ...
-
-
-
-
-
-# @dataclass
-# class ChatMessage:
-#     content: str
-#     ts:      float
-#     sender:  str
 
 @dataclass
 class User:
     sess: Session
     name: str
-    syncts: float 
+    syncts: float = -1
     
-# class Room:
-#     name: str = ""
-#     pswd: str = ""
-#     users: List['User']  = list()
-#     histories: List[ChatMessage] = list()
+@dataclass
+class BizRequest:
+    cmd: str   = None
+    ts:  float = None
+    param: Any = None
 
+@dataclass
+class BizResponse:
+    resp: Any   = None
+    bcresp: Any = None
+    ts: float   = None
+    cmd: str    = None
 
 class BizService:
     def __init__(self, sessservice: SessionService) -> None:
         self.sessservice = sessservice
-        self.regbizfuncs: List[Callable] = list()
+        self.sessservice.set_upper_rchandle(self.rchandle)
+        self.acfuncs: List[Callable] = list()
+        self.rcfuncs: List[Callable] = list()
         
-    def _send(self, user: User, biz: Union[BizResponse, BizReq]):
+        
+    def rchandle(self, ops: Ops, session: Session, package: Package, *args):
         pass
         
+    def _pack_req(self, bizreq: BizRequest) -> Package:
+        return Package.buildpackage().add_cmd(bizreq.cmd) \
+            .add_field_if(bizreq.param is not None, "param", bizreq.param) \
+            .add_field_if(bizreq.ts is not None, Package.TIME, bizreq.ts)
         
-    def _rchandle(self, ops: Ops, session: Session, package: Package, *args):
-        pass
-        
-
-    def _pack_req(self, bizreq: BizReq) -> Package:
-        ...
-        
-    def _unpack_req(self, func: Callable, package: Package) -> BizReq:
-        return BizReq(package.get_field("cmd"), package.get_field("name"), package.get_field("param"))
-
-
-    def _pack_resp(self, bizresps: BizResponse) -> Tuple[Package, Package]:
-        return Package.buildpackage().add_field("resp", bizresps.response) if bizresps.response is not None else None, \
-            Package.buildpackage().add_field("resp", bizresps.bcresponse) if bizresps.bcresponse is not None else None
-
-        
-    def _unpack_resp(self, package: Package) -> BizResponse:
-        return BizResponse(response=package.get_field("resp"))
-
-
-
-class ServerBizService(BizService):
+    def _unpack_req(self, package: Package) -> BizRequest:
+        return BizRequest(package.get_field("cmd"), package.get_field("ts"), package.get_field("param"))
     
-    def __init__(self, sessservice: SessionService) -> None:
-        super().__init__(sessservice)
-        sessservice.set_upper_rchandle(self._rchandle)
-        self.users: Dict[int, User] = dict()
-        self.bizfuncs: Dict[str, Callable] = dict()
-        for name, func in inspect.getmembers(ServerBizService, predicate=inspect.isfunction):
-            if 'wrapped' in dir(func):
-                print(f"{name} registered on {func}")
-                self.bizfuncs[name] = func
-        
-        
-       
-    def getBizFunc(self, package: Package) -> Callable:
-        bizfuncname = package.get_field('cmd')
-        bizfunc = self.bizfuncs.get(bizfuncname)
-        return bizfunc
-    
-        
-    def _rchandle(self, ops: Ops, session: Session, package: Package, *args):
-        if ops == Ops.Add:
-            self.users[session.conn.sock.fileno()] = User(session, "default", -1)
-        elif ops == Ops.Rmv:
-            remove_key = -1
-            for k, v in self.users.items():
-                if v.sess.conn.addr == session.conn.addr:    
-                    remove_key = k
-            if remove_key > 0:
-                self.users.pop(remove_key)
-        elif ops == Ops.Rcv:
-            user: User = self.users.get(session.conn.sock.fileno())
-            bizfunc: Callable = self.getBizFunc(package)
+    def _pack_resp(self, bizresp: BizResponse) -> Package:
+        pack = Package.buildpackage().add_cmd(bizresp.cmd) \
+            .add_field("param", bizresp.resp) \
+            .add_field_if(bizresp.ts is not None, Package.TIME, bizresp.ts)
             
-            if bizfunc is not None:
-                bizreq:  BizReq  = self._unpack_req(bizfunc, package)
-                bizResponse: BizResponse = bizfunc(self, user, bizreq)
-                self._send(user, bizResponse)
-            else:
-                print("No biz func found")
-        
-        clients = [f"{k} -> {v.name}[{v.sess.conn.addr}]" for k, v in self.users.items()]
-        print(f"Live clients {clients}")
+        bc = None if bizresp.bcresp is None else Package.buildpackage().add_cmd(bizresp.cmd) \
+            .add_field("param", bizresp.bcresp) \
+            .add_field_if(bizresp.ts is not None, Package.TIME, bizresp.ts)
+        return pack, bc
     
-    def _send(self, user: User, biz: Union[BizResponse, BizReq]):
-        bizresponse: BizResponse = biz
-        self.sessservice.send(user.sess if user is not None else None, *self._pack_resp(bizresponse))
-
-    def bizservEx(atstate: State=None, swtstate: State = None, cmdptn=None, **kwargs):
-        """Todo maybe we can come later to fix this problem, to make fn inserted in 
-        BizFunc and make new BizFunc still a member of the owner of fn.
-
-        Args:
-            atstate (State): _description_
-            swtstate (State, optional): _description_. Defaults to None.
-            cmdptn (_type_, optional): _description_. Defaults to None.
-        """
-        def inner(fn: Callable):
-            def wrapper(*args, **kwargs):
-                return fn(*args, **kwargs)
-            wrapper.__qualname__ = fn.__qualname__
-            wrapper.__setattr__("wrapped", "server")
-            wrapper.__setattr__("_atstate", atstate)
-            wrapper.__setattr__("_stateto", swtstate)
-            wrapper.__setattr__("_cmdptn", cmdptn)
-            wrapper.__setattr__("_kwargs", kwargs)
-            # wrapper.__call__ = fn.__call__
-            return wrapper
-        return inner
-
     
-    @bizservEx(atstate=State.Hall)
-    def connectuser(self, user: User, bizreq: BizReq) -> BizResponse:
-        user.name = bizreq.name
-        return BizResponse(f"Welcome {bizreq.name}", None)
-        
+    def _getrcfuncs(self, bizreq: BizRequest) -> Callable:
+        for func in self.rcfuncs:
+            cmd = bizreq.cmd
+            if func.__qualname__.partition('.')[-1] == cmd:
+                return func
+        return lambda *args:  BizResponse("NA")
     
-    # @bizservEx(atstate=State.Hall)
-    def disconnectuser(self, user: User, bizreq: BizReq) -> BizResponse:
-        # user.name = biz
-        ...
-        
-    def enteruser(self, ) -> BizResponse:
-        ...
-        
-    @bizservEx(atstate=State.Hall)
-    def testchat(self, user: User, bizreq: BizReq) -> BizResponse:
-        msg = bizreq.param
-        return BizResponse(msg, msg)
-        
+    def close(self, *args):
+        self.sessservice.close(*args)
     
-    def newroom(self, user: User, bizreq: BizReq):
-        ...
-        
-    def destroyroom(self, user: User, bizreq: BizReq) -> BizResponse:
-        ...
-        
-    def enterroom(self, user: User, bizreq: BizReq) -> BizResponse:
-        ...
-        
-    def gethallinfo(self, user: User, bizreq: BizReq) -> BizResponse:
-        ...
-        
-    def getroominfo(self, user: User, bizreq: BizReq) -> BizResponse:
-        ...
-        
 
 
-
-def clntbiz(state:State, invoke:Callable[..., bool],  bindto: Callable = None, **kwargs):
-    def inner(fn: Callable):
-        def wrapper(bizservice: 'ClientBizService', *args, **kwargs):
-            bizreq: BizReq = fn(bizservice, *args, **kwargs)
-            
-            if bindto is not None:
-                package = Package.buildpackage().add_cmd(bindto.__qualname__.partition('.')[-1])
-                package.add_field_if(bizreq.name is not None, "name", bizreq.name)
-                package.add_field_if(bizreq.param is not None, "param", bizreq.param)
-                bizservice._send(None, package)
-            else:
-                print(bizreq.param)
-            
+def bizserv(**kwargs):
+    def inner(fn: Callable[[BizService, User, BizRequest, Any], BizResponse]):
+        def wrapper(bizservice, user: User, bizreq: BizRequest, *args, **kwargs):
+            bizresp: BizResponse = fn(bizservice, user, bizreq, *args, **kwargs)
+            bizresp.cmd = fn.__qualname__.partition('.')[-1]
+            return bizresp
         wrapper.__qualname__ = fn.__qualname__
-        wrapper.__setattr__("wrapped", "clnt")
-        wrapper.__setattr__("invoke", invoke)
-        if bindto is not None:
-            print(f"{fn} binds to {bindto.__qualname__}")
-            wrapper.__setattr__("atstate", bindto._atstate)
+        wrapper.__setattr__("wrapped", "server")
+        wrapper.__setattr__("kwargs", kwargs)
         return wrapper
     return inner
 
+    
+class ServerBizService(BizService):
+    def __init__(self, sessservice: SessionService) -> None:
+        super().__init__(sessservice)
+        self.users: Dict[Any, User] = dict()
+        for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
+            if 'wrapped' in dir(func):
+                print(f"{name} registered on {func}")
+                self.rcfuncs.append(func)
+        
+    
+    def rchandle(self, ops: Ops, session: Session, package: Package, *args):
+        print(f"[Biz Layer] recall {ops} {session.conn.addr} {package}")
+        bizreq = self._unpack_req(package)
+        user = self.users.get(session.conn.addr)
+        if ops == Ops.Add:
+            user = User(session, "default")
+            self.users[session.conn.addr] = user
+        elif ops == Ops.Rmv:
+            self.users.pop(session.conn.addr)
+        elif ops == Ops.Rcv:
+            pass
+        
+        bizfunc = self._getrcfuncs(bizreq)
+        bizresponse: BizResponse = bizfunc(user, bizreq)
+        self.send(user, bizresponse)
+        
+        
+    def send(self, user:User, bizresp: BizResponse):
+        pack, bc = self._pack_resp(bizresp)
+        self.sessservice.send(pack, user.sess)
+        if bc is not None:
+            self.sessservice.send_group(bc, user.sess)
+        
+        
 
-
-            
-
-
+    
+def bizclnt(state:State, 
+            invoke:str = None, 
+            invokeptn: str = None,  
+            bindto: Callable = None, 
+            recall: Callable = None, 
+            **kwargs):
+    def inner(fn: Callable[[BizService, str, str, Any], BizRequest]):
+        def wrapper(bizservice: BizService, inputs: str = None, *args, **kwargs):
+            bizreq: BizRequest = fn(bizservice, inputs = None, *args, **kwargs)
+            bizreq.cmd = bindto.__qualname__.partition(".")[-1]
+            bizservice.send(bizreq)
+            if bindto is not None:
+                bizreq.cmd = bindto.__qualname__.partition(".")[-1]
+            return bizreq
+        
+        wrapper.__qualname__ = fn.__qualname__
+        wrapper.__setattr__("wrapped", "clnt")
+        wrapper.__setattr__("state", state)
+        if invoke is not None or invokeptn is not None:
+            wrapper.__setattr__("invoke", lambda cmd, atstate: \
+                (atstate  == state and (invoke == cmd if invokeptn is  None else re.match(invokeptn, cmd) is not None)))
+        if bindto is not None:
+            print(f"{fn} binds to {bindto.__qualname__}")
+            wrapper.__setattr__("bindtoname", bindto.__qualname__.partition(".")[-1])
+        if recall is not None:
+            print(f"{fn} recall at {recall.__qualname__}")
+            wrapper.__setattr__("recall", recall)
+            recall.__setattr__("recall", "clnt")
+        return wrapper
+    return inner
+    
+    
+        
 class ClientBizService(BizService):
     def __init__(self, sessservice: SessionService) -> None:
         super().__init__(sessservice)
-        sessservice.set_upper_rchandle(self._rchandle)
-        self.bizfuncs: Dict[str, Callable] = dict()
-        for name, func in inspect.getmembers(ClientBizService, predicate=inspect.isfunction):
-            if 'invoke' in dir(func):
+        for name, func in inspect.getmembers(self, predicate=inspect.ismethod):
+            if 'wrapped' in dir(func):
                 print(f"{name} registered on {func}")
-                invoke = func.invoke
-                self.bizfuncs[invoke] = func
+                self.acfuncs.append(func)
+        self.atstate = State.IDLE
         
+    def rchandle(self, ops: Ops, session: Session, package: Package, *args):
+        # print(package)
+        bizreq = self._unpack_req(package)
+        # print(bizreq)
+        for func in self.acfuncs:
+            print(func, func.bindtoname, 'recall' in dir(func) )
+            if func.bindtoname == bizreq.cmd and 'recall' in dir(func):
+                recallfunc = func.recall
+                recallfunc(self, package)
         
+    def send(self, bizreq: BizRequest):
+        self.sessservice.send(self._pack_req(bizreq))
         
-    def _rchandle(self, ops: Ops, session: Session, package: Package, *args):
-        bizresponse = self._unpack_resp(package)
-        print(bizresponse.response)
-        
-        
-    def _send(self, user: User, package: Package):
-        self.sessservice.send(package)
-
-
-
+    
+    
     def process_input(self, inputs: str):
-        inputs = inputs.split()
-        cmd, params = inputs[0], inputs[1:]
-        print(cmd, params)
-        biz = self.bizfuncs.get(cmd)
-        print(biz)
-        biz(self, *inputs[1:])
-        
+        if len(inputs.strip()) <= 0: return
+        splits = inputs.split()
+        cmd, params = splits[0], splits[1:]
+        # print(splits)
+        # print(self.acfuncs)
+        for func in self.acfuncs:
+            # print(cmd)
+            if func.invoke(cmd, self.atstate):
+                # print(cmd)
+                func(inputs, *params)
+                break
+            
 
-
-    @clntbiz(bindto=ServerBizService.connectuser)
-    def connectuser(self, *args, **kwargs) -> BizReq:
-        return BizReq(name="Alice")
     
     
     
-    @clntinvoke("$chat")
-    @clntbiz(bindto=ServerBizService.testchat)
-    def chat(self, *args, **kwargs) -> BizReq:
-        msg = args[0] if len(args) > 0 else ""
-        return BizReq(param=msg)
+    
+    
+    
+    
+class Server(ServerBizService):
+    def __init__(self, sessservice: SessionService) -> None:
+        super().__init__(sessservice)
+        
+    @bizserv(atstate=State.Hall)
+    def testchat(self, user: User, bizreq: BizRequest) -> BizResponse:
+        msg = bizreq.param
+        return BizResponse(msg, msg)
+    
+    @bizserv(atstate=State.Hall)
+    def connectuser(self, user: User, bizreq: BizRequest) -> BizResponse:
+        user.name = bizreq.param
+        return BizResponse(f"Welcome {bizreq.param}", f"{bizreq.param} comes")
+    
+    
+    
+    
+class Client(ClientBizService):
+    def __init__(self, sessservice: SessionService) -> None:
+        super().__init__(sessservice)
+        
+    def show_msg(self, package):
+        print(f"show {package.get_field('param')}")
+        
+    def show_all(self, package):
+        print(f"show all {package.get_field('param')}")
         
     
-    @clntinvoke("$help")
-    @clntbiz()
-    def help(self, *args, **kwargs) -> BizReq:
-        return BizReq(param="HHHHH")
+    @bizclnt(state=State.IDLE,
+             bindto=Server.connectuser,
+             recall=show_msg)
+    def connect(self, inputs=None, *args, **kwargs) -> BizRequest:
+        return BizRequest(param="Alice")
+    
+    @bizclnt(state=State.IDLE, 
+            invokeptn="^[^$].*",
+            bindto=Server.testchat)
+    def chat(self, inputs=None, *args, **kwargs) -> BizRequest:
+        return BizRequest(param=inputs)
+    
+    
+    
+    

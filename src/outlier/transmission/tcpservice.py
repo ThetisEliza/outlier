@@ -1,25 +1,19 @@
 
 import socket
 import select
-import time
 from enum import Enum
 from dataclasses import dataclass
 from typing import Callable, Any, List, Tuple, Dict
 from tools.threadpool import ThreadPool
 from tools.decorators import onexit
-
+from tools.aux import Ops
 
 @dataclass
 class Connection:
     sock: socket.socket
     addr: Any
-
-class Ops(Enum):
-    Add = 0
-    Rmv = 1
-    Rcv = 2
     
-
+    
 class TcpService:
     """This service is to use epoll to provide a bi-direction
     tcp channel, we hope it can be general for both the server and
@@ -32,7 +26,9 @@ class TcpService:
         self.is_block = is_block
         self.conf = conf
         self.loop = True
-        self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = None
+        self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = lambda *args: ...
+        self.conn = Connection(self.sock, None)
+
             
     def send(self, byteflow: bytes, conn: Connection = None):
         """Actively send message to connection
@@ -67,12 +63,15 @@ class TcpService:
         
     @onexit
     def close(self, *args):
+        print(f"[Tcp layer] close")
         self.loop = False
         self.epctl.close()
         self.threadpool.close()
         self.sock.close()
         
-
+        
+        
+        
 class TcpListenService(TcpService):
     """This service is a tcp listener used as a server
     """
@@ -82,6 +81,7 @@ class TcpListenService(TcpService):
         
         
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
+        print(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         if ops == Ops.Add:
             self.conns[fd] = conn
             self.epctl.register(conn.sock, select.EPOLLIN)
@@ -91,11 +91,10 @@ class TcpListenService(TcpService):
                 conn.sock.close()
             finally:
                 del self.conns[fd]
-            print(f"close {conn}")    
-        elif ops == Ops.Rcv:
-            ...
-        if self.upper_rchandle is not None:
-            self.upper_rchandle(ops, conn, byteflow, *args)
+            print(f"close {conn.addr}")    
+                
+        self.upper_rchandle(ops, conn, byteflow, *args)
+    
     
     def _loop(self):
         ssock = self.sock
@@ -136,7 +135,6 @@ class TcpListenService(TcpService):
         super().close()
         
         
-    
 class TcpConnectService(TcpService):
     """This service is a tcp listener used as a client
     """
@@ -146,15 +144,11 @@ class TcpConnectService(TcpService):
         
     def startconnectloop(self):
         self._startloop()
-        
     
     def _loop(self):
-        # if self.__reconnect(self.conf.ip, self.conf.port, retry_time=30) < 0:
-        #     return
         self.sock.connect((self.conf.ip, self.conf.port))
-        self.conn = Connection(self.sock, None)
         self.epctl.register(self.sock, select.EPOLLIN)       
-             
+        self.conn.addr = self.sock.getsockname()
         while self.loop:
             events = self.epctl.poll()
             for fd, _ in events:
@@ -167,40 +161,8 @@ class TcpConnectService(TcpService):
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         print("server failed")
                         self.close()
-                        # self.suspend()
-        # self.startconnectloop()
                         
-        # if self.__reconnect(self.conf.ip, self.conf.port, retry_time=30) < 0:
-    
 
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        
-        if ops == Ops.Rcv:
-            # print(byteflow)
-            ...
-        if self.upper_rchandle is not None:
-            self.upper_rchandle(ops, conn, byteflow, *args)
-
-    def __reconnect(self, ip:str, port:int, retry_time=None):
-        import time
-        retry = 1 if retry_time is None else retry_time
-        for i in range(retry):
-            try:
-                time.sleep(1)
-                self.sock = socket.socket()
-                self.sock.connect((ip, port))
-                self.conn = Connection(self.sock, None)
-                print('reconncting succeed')
-                return 1
-            except:
-                print(f'reconncting failed for {i}/{retry}')
-        print('reconnction failed')
-        return -1
-    
-    def __suspend(self):
-        self.sock.close()
-        self.threadpool.close()
-        self.loop = False
-    
-
-        
+        print(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        self.upper_rchandle(ops, conn, byteflow, *args)

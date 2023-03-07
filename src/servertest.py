@@ -1,6 +1,6 @@
 from transmission.tcpservice import TcpListenService
-from session.sessionservice import ServerSessService
-from biz.bizservice import ServerBizService
+from encryption.sessionservice import ServerSessService
+from biz.bizservice import Server
 
 class Conf:
     ...
@@ -13,7 +13,7 @@ conf.port = 8809
 
 ts = TcpListenService(conf, False)
 ss = ServerSessService(ts)
-bs = ServerBizService(ss)
+bs = Server(ss)
 
 ts.startlistenloop()
 

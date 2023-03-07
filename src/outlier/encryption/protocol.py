@@ -50,15 +50,18 @@ class Package:
             data = json.dumps(self.data)
             return Encrption.entrypt(data)
         except json.JSONDecodeError as e:
+            # print(e)
             return b""
         
     @staticmethod
     def decrypt(byteflow: bytes) -> 'Package':
         try:
             data = Encrption.decrypt(byteflow)
+            # print(data)
             data = json.loads(data)
             return Package(**data)
         except json.JSONDecodeError as e:
+            # print(e)
             return Package()
     
     @staticmethod

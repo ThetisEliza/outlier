@@ -1,5 +1,6 @@
 import time
 from typing import Callable
+import os
 
 def onexit(func: Callable):
     def wrapped_func(*args, **kwargs):
@@ -7,5 +8,5 @@ def onexit(func: Callable):
         func(*args, **kwargs)
         time.sleep(0.1)
         print("Exited Bye")
-        exit(0)
+        os._exit(0)
     return wrapped_func
