@@ -1,6 +1,7 @@
 import queue
 import threading
 import time
+import logging
 from typing import Callable
 from traceback import print_exc
 
@@ -28,7 +29,7 @@ class ThreadPool:
                 self.processing_task_num += 1
                 task(*args)
             except Exception as e:
-                print(f"warning some work failed {e}")
+                logging.debug(f"warning some work failed {e}")
                 if self.show_exception:
                     print_exc()
                 time.sleep(1)
@@ -40,9 +41,9 @@ class ThreadPool:
         self.waiting_task_num += 1
         for thread in self.threads:
             if not thread.is_alive():
-                print(f"Some thread dead remove it {thread}")
+                logging.debug(f"Some thread dead remove it {thread}")
                 self.threads.remove(thread)
-                print(f"Add a new thread")
+                logging.debug(f"Add a new thread")
                 self.threads.append(WorkThread(target=self._work))
     
         self.queue.put((task, args if args is not None else ()))
@@ -53,7 +54,7 @@ class ThreadPool:
             
         
     def check_status(self):
-        print(f"Working thread {len(self.threads)} waiting task {self.waiting_task_num}, processing task {self.processing_task_num}")
+        logging.debug(f"Working thread {len(self.threads)} waiting task {self.waiting_task_num}, processing task {self.processing_task_num}")
         
     # def open_status_monitor(self):
     #     self.status_monitor = True
@@ -72,7 +73,7 @@ class ThreadPool:
     def template_loop(r):
         import time
         for i in range(r):
-            print(f"[TASK]{r} counts at {i}/{r}")
+            logging.debug(f"[TASK]{r} counts at {i}/{r}")
             time.sleep(1)
             
 # tp = ThreadPool(max_size=3)

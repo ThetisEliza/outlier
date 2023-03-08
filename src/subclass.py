@@ -1,22 +1,19 @@
-import inspect
+
+
+
+
 
 class A:
-    def __init__(self) -> None:
-        # print(inspect.getmembers(self))
-        for name, func in inspect.getmembers(self, inspect.ismethod):
-            if '_' not in func.__qualname__:
-                print(name, func)
-                func()
-            
-    def a(self):
-        print('a')
-        
-        
-class B(A):
     
+    ins = None
     
+    def __new__(cls):
+        if A.ins is None:
+            A.ins = super().__new__(cls)
+        return A.ins
+
     
-    def b(self):
-        print('b')
-        
-B()
+a = A()
+b = A()
+print(a)
+print(b)

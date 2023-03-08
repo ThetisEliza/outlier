@@ -1,6 +1,7 @@
 
 import socket
 import select
+import logging
 from enum import Enum
 from dataclasses import dataclass
 from typing import Callable, Any, List, Tuple, Dict
@@ -19,12 +20,12 @@ class TcpService:
     tcp channel, we hope it can be general for both the server and
     the client
     """
-    def __init__(self, conf, is_block: bool = False) -> None:
+    def __init__(self, is_block: bool = False, **kwargs) -> None:
         self.sock = socket.socket()
         self.epctl = select.epoll()
         self.threadpool = ThreadPool()           
         self.is_block = is_block
-        self.conf = conf
+        self.kwargs = kwargs
         self.loop = True
         self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = lambda *args: ...
         self.conn = Connection(self.sock, None)
@@ -55,7 +56,7 @@ class TcpService:
     def _loop(self):
         pass
         
-    def _startloop(self):
+    def startloop(self):
         if self.is_block:
             self._loop()
         else:
@@ -63,7 +64,7 @@ class TcpService:
         
     @onexit
     def close(self, *args):
-        print(f"[Tcp layer] close")
+        logging.debug(f"[Tcp layer] close")
         self.loop = False
         self.epctl.close()
         self.threadpool.close()
@@ -75,13 +76,13 @@ class TcpService:
 class TcpListenService(TcpService):
     """This service is a tcp listener used as a server
     """
-    def __init__(self, conf, is_block: bool) -> None:
-        super().__init__(conf, is_block)
+    def __init__(self, is_block: bool, **kwargs) -> None:
+        super().__init__(is_block, **kwargs)
         self.conns: Dict[int, Connection] = dict()
         
         
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        print(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        logging.debug(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         if ops == Ops.Add:
             self.conns[fd] = conn
             self.epctl.register(conn.sock, select.EPOLLIN)
@@ -91,7 +92,7 @@ class TcpListenService(TcpService):
                 conn.sock.close()
             finally:
                 del self.conns[fd]
-            print(f"close {conn.addr}")    
+            logging.debug(f"close {conn.addr}")    
                 
         self.upper_rchandle(ops, conn, byteflow, *args)
     
@@ -99,13 +100,12 @@ class TcpListenService(TcpService):
     def _loop(self):
         ssock = self.sock
         ssock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        print(self.conf.ip, self.conf.port)
-        ssock.bind((self.conf.ip, self.conf.port))
+        ssock.bind((self.kwargs.get('ip'), self.kwargs.get('port')))
         ssock.listen(5)
         self.epctl = select.epoll()
         self.epctl.register(ssock, select.EPOLLIN)
     
-        print("start listen")
+        logging.debug("start listen")
         while self.loop:
             events = self.epctl.poll()
             for fd, _ in events:
@@ -122,10 +122,10 @@ class TcpListenService(TcpService):
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         self._rchandle(Ops.Rmv, conn, fd)
                     except KeyError:
-                        print(f"Conn fd {fd} not found, ignore")
+                        logging.debug(f"Conn fd {fd} not found, ignore")
     
     def startlistenloop(self):
-        self._startloop()
+        self.startloop()
         
         
     @onexit
@@ -138,15 +138,15 @@ class TcpListenService(TcpService):
 class TcpConnectService(TcpService):
     """This service is a tcp listener used as a client
     """
-    def __init__(self, conf, is_block: bool) -> None:
-        super().__init__(conf, is_block)
+    def __init__(self, is_block: bool, **kwargs) -> None:
+        super().__init__(is_block, **kwargs)
         
         
     def startconnectloop(self):
-        self._startloop()
+        self.startloop()
     
     def _loop(self):
-        self.sock.connect((self.conf.ip, self.conf.port))
+        self.sock.connect((self.kwargs.get('ip'), self.kwargs.get('port')))
         self.epctl.register(self.sock, select.EPOLLIN)       
         self.conn.addr = self.sock.getsockname()
         while self.loop:
@@ -159,10 +159,10 @@ class TcpConnectService(TcpService):
                             raise ConnectionAbortedError()
                         self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, byteflow))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
-                        print("server failed")
+                        logging.debug("server failed")
                         self.close()
                         
 
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        print(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        logging.debug(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         self.upper_rchandle(ops, conn, byteflow, *args)

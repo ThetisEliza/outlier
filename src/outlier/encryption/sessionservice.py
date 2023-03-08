@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Any
 from transmission.tcpservice import TcpService, Connection, Ops
@@ -10,10 +11,11 @@ class Session:
     
     
 class SessionService:
-    def __init__(self, service: TcpService) -> None:
+    def __init__(self, service: TcpService, **kwargs) -> None:
         self.tsservice: TcpService = service
         self.tsservice.set_upper_rchandle(self.rchandle)
         self.upper_rchandle = lambda *args: ...
+        self.kwargs = kwargs
         
         
     def set_upper_rchandle(self, upper_rchandle):
@@ -25,9 +27,9 @@ class SessionService:
             byteflow = self._convert_package_to_byteflow(package)
             self.tsservice.send(byteflow, session.conn)
         except OSError as e:
-            print(f"[Sess layer] send failed {session.conn.addr}")
+            logging.debug(f"[Sess layer] send failed {session.conn.addr}")
             
-    def send_group(self, bcpackage: Package, session: Session = None):
+    def send_group(self, bcpackage: Package, *sessions: Session):
         pass
             
         
@@ -40,14 +42,18 @@ class SessionService:
     def _convert_package_to_byteflow(self, package: Package) -> bytes:
         return package.encrypt() if package else Package().encrypt()
     
+    
+    def start(self):
+        self.tsservice.startloop()
+    
     def close(self, *args):
-        print(f"[Sess layer] close with {args}")
+        logging.debug(f"[Sess layer] close with {args}")
         self.tsservice.close()
     
     
 class ServerSessService(SessionService):
-    def __init__(self, service: TcpService) -> None:
-        super().__init__(service)
+    def __init__(self, service: TcpService, **kwargs) -> None:
+        super().__init__(service, **kwargs)
         self.sesss: Dict[Any, Session] = dict()
     
     def rchandle(self, ops: Ops, conn: Connection, byteflow: bytes = None, *args):
@@ -62,7 +68,7 @@ class ServerSessService(SessionService):
             pass
         # self.send(session, package)
         # self.send_group(session, package.add_field("notes", "bc").add_field("from", session.conn.addr))
-        print(f"[Sess layer] recall {ops}, {conn.addr}, {package}")
+        logging.debug(f"[Sess layer] recall {ops}, {conn.addr}, {package}")
         self.upper_rchandle(ops, session, package, *args)
     
     def send(self, package: Package, session: Session = None):
@@ -74,16 +80,16 @@ class ServerSessService(SessionService):
         super().send(package, session)
             
                     
-    def send_group(self, bcpackage: Package, session: Session = None):
-        for other in self.sesss:
-            if other != session.conn.addr and session.group == self.sesss[other].group:
-                othersession = self.sesss[other] 
-                super().send(bcpackage, othersession)
+    def send_group(self, bcpackage: Package, *sessions: Session):
+        for session in sessions:
+            if session in self.sesss.values():
+                self.send(bcpackage, session)
+                
                 
         
 class ConnectSessService(SessionService):
-    def __init__(self, service: TcpService) -> None:
-        super().__init__(service)
+    def __init__(self, service: TcpService, **kwargs) -> None:
+        super().__init__(service, **kwargs)
         self.session = Session(service.conn)
         
     def send(self, package: Package, session: Session = None):
@@ -91,7 +97,7 @@ class ConnectSessService(SessionService):
     
     def rchandle(self, ops: Ops, conn: Connection, byteflow: bytes = None, *args):
         package = self._convert_byteflow_to_package(byteflow)
-        print(f"[Sess layer] recall {ops}, {conn.addr}, {package}")
+        logging.debug(f"[Sess layer] recall {ops}, {conn.addr}, {package}")
         self.upper_rchandle(ops, self.session, package, *args)
         
     
