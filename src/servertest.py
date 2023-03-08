@@ -1,7 +1,7 @@
 import logging
 from argparse import ArgumentParser
 
-from biz.bizservice import Server
+from biz.server import Server
 from encryption.sessionservice import ServerSessService
 from transmission.tcpservice import TcpListenService
 
