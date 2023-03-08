@@ -230,12 +230,12 @@ def bizclnt(state:State,
             
         # set server proc method
         if bindto is not None:
-            logging.debug(f"{fn} binds to {bindto.__qualname__}")
+            # logging.debug(f"{fn} binds to {bindto.__qualname__}")
             wrapper.__setattr__("bindtoname", bindto.__qualname__.partition(".")[-1])
             
         # set recall method to proc server response
         if recall is not None:
-            logging.debug(f"{fn} recall at {recall.__qualname__}")
+            # logging.debug(f"{fn} recall at {recall.__qualname__}")
             wrapper.__setattr__("recall", recall)
             recall.__setattr__("recall", "clnt")
             

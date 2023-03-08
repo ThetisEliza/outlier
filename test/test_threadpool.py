@@ -1,7 +1,7 @@
-import unittest
 import sys
-from pathlib import Path
 import time
+import unittest
+from pathlib import Path
 from tools.threadpool import ThreadPool
 
 sys.path.append(Path(__file__).parent.parent / "src" / "outlier")
@@ -29,17 +29,3 @@ class testThreadPool(unittest.TestCase):
         t.queue.join()
         endtime = time.time()
         self.assertAlmostEqual(endtime - starttime, 5, delta=0.1)
-        
-        
-    # def test_force_close(self):
-    #     starttime = time.time()
-    #     t = ThreadPool(3, False)
-    #     t.put_task(ThreadPool.template_loop, args=(1,))
-    #     t.put_task(ThreadPool.template_loop, args=(5,))
-    #     t.put_task(ThreadPool.template_loop, args=(4,))
-    #     time.sleep(3)
-    #     print("Slept finished, close thread.")
-    #     t.close()
-    #     t.queue.join()
-    #     endtime = time.time()
-    #     print(endtime - starttime)
