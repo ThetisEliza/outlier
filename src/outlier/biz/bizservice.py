@@ -1,21 +1,12 @@
-import inspect
-import logging
-import re
-import signal
-import time
-from dataclasses import dataclass
-from datetime import datetime
-from enum import Enum
-from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar, Union
-
-from encryption.sessionservice import Package, Session, SessionService
-from transmission.tcpservice import Ops
-
 '''
-I am kinda confused. what is the design supposed to ... I think there must be
-a way for a proper update process. Now let's use another way. We use server 
-as the `stem` update way, client follows. we should use some way to add the biz
-respond function automatically and we should use some way to make the client can
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 20:55:38
+FilePath: /outlier/src/outlier/biz/bizservice.py
+
+This is the key layer for bussniness implementation. We use server 
+as the `stem` update way, client follows. we use some way to add the biz
+respond function automatically and we use some way to make the client can
 easily correspoing to it.
 For exmaple,
 
@@ -48,6 +39,17 @@ We have three phase in total.
 5. repsonse -> package
 6. solve repsonse -> biz
 '''
+import inspect
+import logging
+import re
+import signal
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Dict, List
+
+from encryption.sessionservice import Package, Session, SessionService
+from transmission.tcpservice import Ops
+
 
 class State(Enum):
     IDLE = -1
@@ -125,10 +127,20 @@ class BizService:
 
 
 def bizserv(**kwargs):
+    """This decorator can make a method in server to be a busniess function
+    and automatically do works around the method list as follows:
+    1. Automatically registered in the server and handle the comming message
+    if command inside corresponds.
+    2. Send the response to client for the requesting client and broadcast the message
+    for the group designated.
+    3. Once `rc` is set, it can handle the corresponding Ops, if required.
+    
+    """
     def inner(fn: Callable[[BizService, User, BizRequest, Any], BizResponse]):
         def wrapper(bizservice, user: User, bizreq: BizRequest, *args, **kwargs):
             bizresp: BizResponse = fn(bizservice, user, bizreq, *args, **kwargs)
             bizresp.cmd = fn.__qualname__.partition('.')[-1]
+            bizservice.send(user, bizresp)
             return bizresp
         wrapper.__qualname__ = fn.__qualname__
         wrapper.__setattr__("wrapped", "server")
@@ -139,7 +151,8 @@ def bizserv(**kwargs):
         return wrapper
     return inner
 
-    
+
+
 class ServerBizService(BizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
         super().__init__(sessservice, **kwargs)
@@ -163,8 +176,8 @@ class ServerBizService(BizService):
             pass
         
         bizfunc = self._getrcfuncs(ops, bizreq)
-        bizresponse: BizResponse = bizfunc(user, bizreq)
-        self.send(user, bizresponse)
+        bizfunc(user, bizreq)
+        
         
         
     def send(self, user:User, bizresp: BizResponse):
@@ -189,7 +202,24 @@ def bizclnt(state:State,
             bindto: Callable = None, 
             recall: Callable = None, 
             **kwargs):
+    """This decorator can make a method in client to be a busniess function
+    and automatically do works around the method list as follows:
     
+    1. Automatically registered in the client.
+    2. Send the request to the server
+    3. Designate a state can be invoked
+    4. Designate a invoke command or pattern
+    5. Designate a responding method of the server
+    6. Designate a recall method once the message comes from the server
+    
+
+    Args:
+        state (State): _description_
+        invoke (str, optional): _description_. Defaults to None.
+        invokeptn (str, optional): _description_. Defaults to None.
+        bindto (Callable, optional): _description_. Defaults to None.
+        recall (Callable, optional): _description_. Defaults to None.
+    """
     def gethelp():
         usage =  kwargs.get("usage", None)
         if invoke is not None:

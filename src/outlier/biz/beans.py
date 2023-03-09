@@ -1,3 +1,9 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 11:54:11
+FilePath: /outlier/src/outlier/biz/beans.py
+'''
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -51,6 +57,7 @@ class Room:
         self.passwd:  str               = None
         self.name:    str               = name
         self.connects:int               = 0
+        self.lastact: float             = -1
         Room.index += 1
         
     

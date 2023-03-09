@@ -1,11 +1,15 @@
+import logging
 import time
+from argparse import ArgumentParser
 from typing import List
 
-from encryption.sessionservice import SessionService
-from biz.bizservice import ClientBizService, State, bizclnt, BizRequest
 from biz.beans import ChatMessage
-
+from biz.bizservice import BizRequest, ClientBizService, State, bizclnt
 from biz.server import Server
+from encryption.sessionservice import ConnectSessService, SessionService
+from transmission.tcpservice import TcpConnectService
+
+from tools.utils import initlogger
 
 
 class Client(ClientBizService):
@@ -14,6 +18,7 @@ class Client(ClientBizService):
         
         self.chatblock = False
         self.buffer: List[ChatMessage] = list()
+        self.name = kwargs.get('name')
         
     def show_msg(self, package):
         print(f"{package.get_field('param')}")
@@ -25,22 +30,28 @@ class Client(ClientBizService):
             self.buffer.append(cm)
         else:
             print(cm.format())
-        
     
     def connected(self, package):
         self.atstate = State.Hall
         self.show_msg(package)
+        
+    def process_input(self, inputs: str):
+        super().process_input(inputs)
+        time.sleep(0.5)
+        for cm in self.buffer:
+            print(cm.format())
+            
     
     @bizclnt(state=State.IDLE, bindto=Server.connectuser, recall=connected)
     def connect(self, inputs=None, *args, **kwargs) -> BizRequest:
-        return BizRequest(param="Alice")
+        return BizRequest(param=self.name)
     
     
     
     @bizclnt(state=State.Room, invokeptn="^(?!\$).+", bindto=Server.chat, recall=show_chat)
     def chat(self, inputs=None, *args, **kwargs) -> BizRequest:
         from datetime import datetime
-        cm = ChatMessage("Alice", datetime.now().timestamp(), inputs)
+        cm = ChatMessage(self.name, datetime.now().timestamp(), inputs)
         return BizRequest(param=cm.getattrs())
     
     
@@ -62,7 +73,6 @@ class Client(ClientBizService):
     @bizclnt(state=State.Hall, invoke="$help")
     def help(self, inputs=None, *args, **kwargs) -> BizRequest:
         return BizRequest()
-    
     
     
     
@@ -117,7 +127,6 @@ class Client(ClientBizService):
         return BizRequest()
         
         
-    
     def start(self):
         super().start()
         time.sleep(0.5)
@@ -125,3 +134,27 @@ class Client(ClientBizService):
         while True:
             a = input()
             self.process_input(a)
+            
+            
+            
+
+
+
+def main():
+    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
+    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-n", "--name", required=True, type=str)
+    argparse.add_argument("-i", "--ip",   required=True, type=str)
+    argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
+        
+    kwargs = vars(argparse.parse_args())
+    initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    
+    
+    ts = TcpConnectService(False, **kwargs)
+    ss = ConnectSessService(ts, **kwargs)
+    bs = Client(ss, **kwargs)
+    bs.start()  
+
+    
+if __name__ == '__main__':
+    main()

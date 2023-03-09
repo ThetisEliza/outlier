@@ -1,9 +1,17 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 16:55:08
+FilePath: /outlier/src/outlier/tools/utils.py
+'''
 import logging
 from logging import handlers
 import socket
 import sys
 
 FORMAT = '%(asctime)s - %(message)s'
+
+
 
 def initlogger(level, format=FORMAT, filehandlename=None):
     """To init log with certain level and format,
