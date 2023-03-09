@@ -1,3 +1,9 @@
+'''
+Date: 2023-02-26 11:12:35
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 21:09:43
+FilePath: /outlier/setup.py
+'''
 import setuptools
 
 with open("README.md", 'r') as f:
@@ -5,7 +11,7 @@ with open("README.md", 'r') as f:
     
 setuptools.setup(
     name="outlierchat",
-    version="0.0.4",
+    version="0.0.5",
     author="Thetis",
     author_email="736396627@qq.com",
     description="A simple server to build a secret channel for chat.",

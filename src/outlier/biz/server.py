@@ -1,18 +1,24 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 14:13:29
+LastEditTime: 2023-03-09 17:54:57
 FilePath: /outlier/src/outlier/biz/server.py
 '''
 import logging
-from typing import List, Union
 import time
-from encryption.sessionservice import SessionService
-from transmission.tcpservice import Ops
-from biz.bizservice import ServerBizService,  BizRequest, BizResponse, User, bizserv
-from biz.beans import ChatMessage,  Room
+from argparse import ArgumentParser
 from datetime import datetime
+from typing import List, Union
+
+from biz.beans import ChatMessage, Room
+from biz.bizservice import (BizRequest, BizResponse, ServerBizService, User,
+                            bizserv)
+from encryption.sessionservice import ServerSessService, SessionService
 from tools.threadpool import ThreadPool
+from transmission.tcpservice import Ops, TcpListenService
+
+from tools.utils import gethostaddr, initlogger
+
 
 class Server(ServerBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
@@ -114,3 +120,34 @@ class Server(ServerBizService):
         else:
             return BizResponse('error')
         
+
+
+
+def main():
+    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
+    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-lh", "--loghandler", default=None, type=str)
+    argparse.add_argument("-i", "--ip",     required=False, type=str, default=gethostaddr())
+    argparse.add_argument("-p", "--port",   required=False, type=int, default=8809)
+        
+    kwargs = vars(argparse.parse_args())
+    initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    
+
+    # logger = logging.getLogger("Server")
+    
+    logging.info(f"Check init parameters {kwargs}")
+    
+    logging.info(f"Build tcp service")
+    ts = TcpListenService(True, **kwargs)
+    
+    logging.info(f"Build Encryption service")
+    ss = ServerSessService(ts, **kwargs)
+    
+    logging.info(f"Build server")
+    bs = Server(ss, **kwargs)
+    
+    logging.info(f"Server start")
+    bs.start()
+    
+if __name__ == '__main__':
+    main()

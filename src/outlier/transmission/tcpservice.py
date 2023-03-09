@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 14:13:53
+LastEditTime: 2023-03-09 20:56:15
 FilePath: /outlier/src/outlier/transmission/tcpservice.py
 
 This module is to provide stable and reliable layer communication as tcp protocol
@@ -14,9 +14,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable, Any, Dict
 from tools.threadpool import ThreadPool
-from tools.decorators import onexit
+from tools.decorators import onexit, singleton
 from tools.aux import Ops
-from tools.utils import singleton
 
 @dataclass
 class Connection:
@@ -61,12 +60,25 @@ class TcpService:
         self.upper_rchandle = upper_rchandle
     
     def _rchandle(self, ops: Ops, conn: Connection, fd:int = -1, byteflow: bytes = None, *args):
+        """Handling the event when something happens on the socket, for server, the event
+        for ADD, RECEIVE and REMOVE should be handled, and for clients, the event of REVEIVE and
+        ERROR connection should be handled
+
+        Args:
+            ops (Ops): Ops
+            conn (Connection): connection encapsuled socket
+            fd (int, optional): _description_. the file decriptor for socket
+            byteflow (bytes, optional): _description_. incomming message flow
+        """
         pass 
         
     def _loop(self):
         pass
         
     def startloop(self):
+        """This start loop goes as to start the loop for connection receiving, blocking run if 
+        instance variable `is_block` is set, otherwise, runs in the thread pool.
+        """
         if self.is_block:
             self._loop()
         else:
@@ -74,6 +86,8 @@ class TcpService:
         
     @onexit
     def close(self, *args):
+        """Exiting method for close `loop`, `epoll`, `thread pool` and `socket`
+        """
         logging.debug(f"[Tcp layer] close")
         self.loop = False
         self.epctl.close()
@@ -111,12 +125,13 @@ class TcpListenService(TcpService):
     def _loop(self):
         ssock = self.sock
         ssock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        ssock.bind((self.kwargs.get('ip'), self.kwargs.get('port')))
+        ip, port = self.kwargs.get('ip'), self.kwargs.get('port')
+        ssock.bind((ip, port))
         ssock.listen(5)
         self.epctl = select.epoll()
         self.epctl.register(ssock, select.EPOLLIN)
     
-        logging.debug("start listen")
+        logging.info(f"start listen on ip {ip}, port {port}")
         while self.loop:
             events = self.epctl.poll()
             for fd, _ in events:

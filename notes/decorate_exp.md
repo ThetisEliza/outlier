@@ -1,3 +1,5 @@
+```python
+
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
@@ -132,3 +134,5 @@ a = A()
 a2 = A()
 print(a.b.c)
 print(a2.b.c)
+
+```

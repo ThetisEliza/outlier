@@ -1,3 +1,11 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 20:36:08
+FilePath: /outlier/src/outlier/encryption/protocol.py
+
+'''
+
 import hashlib
 import json
 from datetime import datetime
@@ -25,6 +33,9 @@ class Encrption:
         return out.decode('ascii')
     
 class Package:
+    """Package for communication, encapsuling `timestamp`, `cmd` and parameters,
+    better be initialized with `Package.buildpackage`
+    """
     
     CMD     = "cmd"
     TIME    = "timestamp"

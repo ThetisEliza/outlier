@@ -1,12 +1,22 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 20:34:20
+FilePath: /outlier/src/outlier/encryption/sessionservice.py
+
+This module is to encrypt and decrypt tcp byteflow and provide better interfaces for business layer
+'''
 import logging
 from dataclasses import dataclass, field
 from typing import List, Set, Dict, Any
 from transmission.tcpservice import TcpService, Connection, Ops
 from .protocol import Package
-from tools.utils import singleton
+from tools.decorators import singleton
 
 @dataclass
 class Session:
+    """Encapsuled connection and organize it with group
+    """
     conn:   Connection = None
     group:  int       = -1
     
@@ -67,8 +77,6 @@ class ServerSessService(SessionService):
             self.sesss.pop(conn.addr)
         elif ops == Ops.Rcv:
             pass
-        # self.send(session, package)
-        # self.send_group(session, package.add_field("notes", "bc").add_field("from", session.conn.addr))
         logging.debug(f"[Sess layer] recall {ops}, {conn.addr}, {package}")
         self.upper_rchandle(ops, session, package, *args)
     
