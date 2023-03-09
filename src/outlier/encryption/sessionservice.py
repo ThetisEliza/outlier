@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Set, Dict, Any
 from transmission.tcpservice import TcpService, Connection, Ops
 from .protocol import Package
+from tools.utils import singleton
 
 @dataclass
 class Session:
@@ -50,7 +51,7 @@ class SessionService:
         logging.debug(f"[Sess layer] close with {args}")
         self.tsservice.close()
     
-    
+@singleton    
 class ServerSessService(SessionService):
     def __init__(self, service: TcpService, **kwargs) -> None:
         super().__init__(service, **kwargs)
@@ -86,7 +87,7 @@ class ServerSessService(SessionService):
                 self.send(bcpackage, session)
                 
                 
-        
+@singleton
 class ConnectSessService(SessionService):
     def __init__(self, service: TcpService, **kwargs) -> None:
         super().__init__(service, **kwargs)

@@ -1,9 +1,16 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 11:49:50
+FilePath: /outlier/src/outlier/tools/threadpool.py
+'''
 import queue
 import threading
 import time
 import logging
 from typing import Callable
 from traceback import print_exc
+from tools.utils import singleton
 
 class WorkThread(threading.Thread):
     def __init__(self, target):
@@ -11,7 +18,7 @@ class WorkThread(threading.Thread):
         self.setDaemon(True)
         self.start()
         
-            
+@singleton
 class ThreadPool:
     def __init__(self, max_size=10, show_exception=True, status_monitor=False) -> None:
         self.queue = queue.Queue()

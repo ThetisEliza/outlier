@@ -1,21 +1,32 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-09 14:13:53
+FilePath: /outlier/src/outlier/transmission/tcpservice.py
+
+This module is to provide stable and reliable layer communication as tcp protocol
+'''
 
 import socket
 import select
 import logging
-from enum import Enum
 from dataclasses import dataclass
-from typing import Callable, Any, List, Tuple, Dict
+from datetime import datetime
+from typing import Callable, Any, Dict
 from tools.threadpool import ThreadPool
 from tools.decorators import onexit
 from tools.aux import Ops
+from tools.utils import singleton
 
 @dataclass
 class Connection:
     sock: socket.socket
     addr: Any
+    last: float
     
     
 class TcpService:
+    
     """This service is to use epoll to provide a bi-direction
     tcp channel, we hope it can be general for both the server and
     the client
@@ -28,8 +39,7 @@ class TcpService:
         self.kwargs = kwargs
         self.loop = True
         self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = lambda *args: ...
-        self.conn = Connection(self.sock, None)
-
+        self.conn = Connection(self.sock, None, -1)
             
     def send(self, byteflow: bytes, conn: Connection = None):
         """Actively send message to connection
@@ -72,13 +82,14 @@ class TcpService:
         
         
         
-        
+@singleton
 class TcpListenService(TcpService):
     """This service is a tcp listener used as a server
     """
     def __init__(self, is_block: bool, **kwargs) -> None:
         super().__init__(is_block, **kwargs)
         self.conns: Dict[int, Connection] = dict()
+        self.threadpool.put_task(self._tcp_guard)
         
         
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
@@ -93,9 +104,9 @@ class TcpListenService(TcpService):
             finally:
                 del self.conns[fd]
             logging.debug(f"close {conn.addr}")    
-                
+        conn.last = datetime.now().timestamp()
         self.upper_rchandle(ops, conn, byteflow, *args)
-    
+
     
     def _loop(self):
         ssock = self.sock
@@ -111,7 +122,7 @@ class TcpListenService(TcpService):
             for fd, _ in events:
                 if fd == ssock.fileno():
                     sock, addr = ssock.accept()
-                    self.threadpool.put_task(self._rchandle, args=(Ops.Add, Connection(sock, addr), sock.fileno()))
+                    self.threadpool.put_task(self._rchandle, args=(Ops.Add, Connection(sock, addr, datetime.now().timestamp()), sock.fileno()))
                 else:
                     try:
                         conn = self.conns[fd]
@@ -128,6 +139,20 @@ class TcpListenService(TcpService):
         self.startloop()
         
         
+    def _tcp_guard(self):
+        max_idle = self.kwargs.get('roomgard', 3600)
+        import time
+        while True:
+            rms = []
+            for fd, conn in self.conns.items():
+                if datetime.now().timestamp() - conn.last > max_idle:
+                    logging.info(f"tcp guards remove {conn.addr}")
+                    rms.append((conn, fd))
+            for conn, fd in rms:
+                self._rchandle(Ops.Rmv, conn, fd)
+            time.sleep(1)
+        
+        
     @onexit
     def close(self, *args):
         for fd in self.conns:
@@ -135,6 +160,7 @@ class TcpListenService(TcpService):
         super().close()
         
         
+@singleton  
 class TcpConnectService(TcpService):
     """This service is a tcp listener used as a client
     """

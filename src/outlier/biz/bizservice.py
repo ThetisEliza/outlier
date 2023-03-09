@@ -10,6 +10,7 @@ from typing import Any, Callable, Dict, Generic, List, Tuple, TypeVar, Union
 
 from encryption.sessionservice import Package, Session, SessionService
 from transmission.tcpservice import Ops
+from tools.utils import singleton
 
 '''
 I am kinda confused. what is the design supposed to ... I think there must be
@@ -129,6 +130,7 @@ def bizserv(**kwargs):
         def wrapper(bizservice, user: User, bizreq: BizRequest, *args, **kwargs):
             bizresp: BizResponse = fn(bizservice, user, bizreq, *args, **kwargs)
             bizresp.cmd = fn.__qualname__.partition('.')[-1]
+            bizservice.send(user, bizresp)
             return bizresp
         wrapper.__qualname__ = fn.__qualname__
         wrapper.__setattr__("wrapped", "server")
@@ -139,7 +141,7 @@ def bizserv(**kwargs):
         return wrapper
     return inner
 
-    
+
 class ServerBizService(BizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
         super().__init__(sessservice, **kwargs)
@@ -163,8 +165,8 @@ class ServerBizService(BizService):
             pass
         
         bizfunc = self._getrcfuncs(ops, bizreq)
-        bizresponse: BizResponse = bizfunc(user, bizreq)
-        self.send(user, bizresponse)
+        bizfunc(user, bizreq)
+        
         
         
     def send(self, user:User, bizresp: BizResponse):

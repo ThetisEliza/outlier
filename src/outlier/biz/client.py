@@ -14,6 +14,7 @@ class Client(ClientBizService):
         
         self.chatblock = False
         self.buffer: List[ChatMessage] = list()
+        self.name = kwargs.get('name')
         
     def show_msg(self, package):
         print(f"{package.get_field('param')}")
@@ -25,22 +26,28 @@ class Client(ClientBizService):
             self.buffer.append(cm)
         else:
             print(cm.format())
-        
     
     def connected(self, package):
         self.atstate = State.Hall
         self.show_msg(package)
+        
+    def process_input(self, inputs: str):
+        super().process_input(inputs)
+        time.sleep(0.5)
+        for cm in self.buffer:
+            print(cm.format())
+            
     
     @bizclnt(state=State.IDLE, bindto=Server.connectuser, recall=connected)
     def connect(self, inputs=None, *args, **kwargs) -> BizRequest:
-        return BizRequest(param="Alice")
+        return BizRequest(param=self.name)
     
     
     
     @bizclnt(state=State.Room, invokeptn="^(?!\$).+", bindto=Server.chat, recall=show_chat)
     def chat(self, inputs=None, *args, **kwargs) -> BizRequest:
         from datetime import datetime
-        cm = ChatMessage("Alice", datetime.now().timestamp(), inputs)
+        cm = ChatMessage(self.name, datetime.now().timestamp(), inputs)
         return BizRequest(param=cm.getattrs())
     
     
@@ -62,7 +69,6 @@ class Client(ClientBizService):
     @bizclnt(state=State.Hall, invoke="$help")
     def help(self, inputs=None, *args, **kwargs) -> BizRequest:
         return BizRequest()
-    
     
     
     
@@ -117,7 +123,6 @@ class Client(ClientBizService):
         return BizRequest()
         
         
-    
     def start(self):
         super().start()
         time.sleep(0.5)
