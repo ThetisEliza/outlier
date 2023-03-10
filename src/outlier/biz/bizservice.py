@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 20:55:38
+LastEditTime: 2023-03-10 02:43:33
 FilePath: /outlier/src/outlier/biz/bizservice.py
 
 This is the key layer for bussniness implementation. We use server 
@@ -47,8 +47,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List
 
-from encryption.sessionservice import Package, Session, SessionService
-from transmission.tcpservice import Ops
+from ..encryption.sessionservice import Package, Session, SessionService
+from ..transmission.tcpservice import Ops
 
 
 class State(Enum):

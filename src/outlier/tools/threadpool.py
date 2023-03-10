@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 16:56:01
+LastEditTime: 2023-03-10 02:58:46
 FilePath: /outlier/src/outlier/tools/threadpool.py
 '''
 import queue
@@ -10,7 +10,7 @@ import time
 import logging
 from typing import Callable
 from traceback import print_exc
-from tools.decorators import singleton
+from ..tools.decorators import singleton
 
 class WorkThread(threading.Thread):
     def __init__(self, target):

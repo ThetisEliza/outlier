@@ -1,7 +1,7 @@
 '''
-Date: 2023-02-26 11:12:35
+Date: 2023-03-10 02:53:02
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 21:09:43
+LastEditTime: 2023-03-10 14:21:52
 FilePath: /outlier/setup.py
 '''
 import setuptools
@@ -11,7 +11,7 @@ with open("README.md", 'r') as f:
     
 setuptools.setup(
     name="outlierchat",
-    version="0.0.5",
+    version="1.0.0",
     author="Thetis",
     author_email="736396627@qq.com",
     description="A simple server to build a secret channel for chat.",
@@ -26,4 +26,4 @@ setuptools.setup(
         "Operating System :: OS Independent"
     ],
     python_requires='>3.6'
-)    
+)
