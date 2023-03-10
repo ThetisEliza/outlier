@@ -3,14 +3,13 @@ import time
 from argparse import ArgumentParser
 from typing import List
 
-from biz.beans import ChatMessage
-from biz.bizservice import BizRequest, ClientBizService, State, bizclnt
-from biz.server import Server
-from encryption.sessionservice import ConnectSessService, SessionService
-from transmission.tcpservice import TcpConnectService
+from .biz.beans import ChatMessage
+from .biz.bizservice import BizRequest, ClientBizService, State, bizclnt
+from .encryption.sessionservice import ConnectSessService, SessionService
+from .transmission.tcpservice import TcpConnectService
 
-from tools.utils import initlogger
-
+from .tools.utils import initlogger
+from .server import Server
 
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:

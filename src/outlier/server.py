@@ -1,8 +1,8 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 17:54:57
-FilePath: /outlier/src/outlier/biz/server.py
+LastEditTime: 2023-03-10 14:09:50
+FilePath: /outlier/src/outlier/server.py
 '''
 import logging
 import time
@@ -10,20 +10,20 @@ from argparse import ArgumentParser
 from datetime import datetime
 from typing import List, Union
 
-from biz.beans import ChatMessage, Room
-from biz.bizservice import (BizRequest, BizResponse, ServerBizService, User,
+from .biz.beans import ChatMessage, Room
+from .biz.bizservice import (BizRequest, BizResponse, ServerBizService, User,
                             bizserv)
-from encryption.sessionservice import ServerSessService, SessionService
-from tools.threadpool import ThreadPool
-from transmission.tcpservice import Ops, TcpListenService
+from .encryption.sessionservice import ServerSessService, SessionService
+from .tools.threadpool import ThreadPool
+from .transmission.tcpservice import Ops, TcpListenService
 
-from tools.utils import gethostaddr, initlogger
+from .tools.utils import gethostaddr, initlogger
 
 
 class Server(ServerBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
         super().__init__(sessservice, **kwargs)
-        self.rooms: List[Room] = [Room("R1")]
+        self.rooms: List[Room] = [Room("Alpha"), Room("Bravo"), Room("Charlie")]
         self.threadpool = ThreadPool()
         self.threadpool.put_task(self._room_guard)
         self.rooms[0].lastact = datetime.now().timestamp()
