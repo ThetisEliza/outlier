@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-10 02:47:10
+LastEditTime: 2023-03-10 17:38:05
 FilePath: /outlier/src/outlier/transmission/tcpservice.py
 
 This module is to provide stable and reliable layer communication as tcp protocol
@@ -34,9 +34,10 @@ class TcpService:
     """
     def __init__(self, is_block: bool = False, **kwargs) -> None:
         self.sock = socket.socket()
-        self.epctl = select.epoll()
+        # self.epctl = select.epoll()
         self.threadpool = ThreadPool()           
         self.is_block = is_block
+        self.rlist = []
         self.kwargs = kwargs
         self.loop = True
         self.upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any] = lambda *args: ...
@@ -92,7 +93,7 @@ class TcpService:
         """
         logging.debug(f"[Tcp layer] close")
         self.loop = False
-        self.epctl.close()
+        # self.epctl.close()
         self.threadpool.close()
         self.sock.close()
         
@@ -112,9 +113,11 @@ class TcpListenService(TcpService):
         logging.debug(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         if ops == Ops.Add:
             self.conns[fd] = conn
-            self.epctl.register(conn.sock, select.EPOLLIN)
+            # self.epctl.register(conn.sock, select.EPOLLIN)
+            self.rlist.append(fd)
         elif ops == Ops.Rmv:
             try:
+                self.rlist.remove(fd)
                 conn = self.conns.get(fd)
                 conn.sock.close()
             finally:
@@ -130,13 +133,15 @@ class TcpListenService(TcpService):
         ip, port = self.kwargs.get('ip'), self.kwargs.get('port')
         ssock.bind((ip, port))
         ssock.listen(5)
-        self.epctl = select.epoll()
-        self.epctl.register(ssock, select.EPOLLIN)
-    
+        # self.epctl = select.epoll()
+        # self.epctl.register(ssock, select.EPOLLIN)
+        self.rlist.append(ssock.fileno())
         logging.info(f"start listen on ip {ip}, port {port}")
+        logging.debug(f"using select")
         while self.loop:
-            events = self.epctl.poll()
-            for fd, _ in events:
+            rl, _, _ = select.select(self.rlist, [], [], 0.1)
+            # events = self.epctl.poll()
+            for fd in rl:
                 if fd == ssock.fileno():
                     sock, addr = ssock.accept()
                     self.threadpool.put_task(self._rchandle, args=(Ops.Add, Connection(sock, addr, datetime.now().timestamp()), sock.fileno()))
@@ -190,11 +195,13 @@ class TcpConnectService(TcpService):
     
     def _loop(self):
         self.sock.connect((self.kwargs.get('ip'), self.kwargs.get('port')))
-        self.epctl.register(self.sock, select.EPOLLIN)       
+        # self.epctl.register(self.sock, select.EPOLLIN)  
+        self.rlist.append(self.sock.fileno())     
         self.conn.addr = self.sock.getsockname()
         while self.loop:
-            events = self.epctl.poll()
-            for fd, _ in events:
+            # events = self.epctl.poll()
+            rl, _, _ = select.select(self.rlist, [], [], 0.1)
+            for fd in rl:
                 if fd == self.sock.fileno():
                     try:
                         byteflow = self.sock.recv(1024)
