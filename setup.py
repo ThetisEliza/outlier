@@ -1,12 +1,12 @@
 '''
 Date: 2023-03-10 02:53:02
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-12 17:57:28
+LastEditTime: 2023-03-12 21:00:42
 FilePath: /outlier/setup.py
 '''
 import setuptools
 
-with open("README.md", 'r') as f:
+with open("README.md", encoding="utf8") as f:
     long_description = f.read()
     
 setuptools.setup(
