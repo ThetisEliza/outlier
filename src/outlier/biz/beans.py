@@ -1,12 +1,13 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 11:54:11
+LastEditTime: 2023-03-12 20:12:28
 FilePath: /outlier/src/outlier/biz/beans.py
 '''
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
+
 
 
 @dataclass

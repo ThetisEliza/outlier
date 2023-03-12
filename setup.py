@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-10 02:53:02
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-12 11:43:51
+LastEditTime: 2023-03-12 17:57:28
 FilePath: /outlier/setup.py
 '''
 import setuptools
@@ -20,7 +20,7 @@ setuptools.setup(
     url="",
     package_dir={"": "src"},
     packages=setuptools.find_packages("src"),
-    classifiers = [
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent"

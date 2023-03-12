@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-10 02:43:49
+LastEditTime: 2023-03-12 20:14:55
 FilePath: /outlier/src/outlier/encryption/sessionservice.py
 
 This module is to encrypt and decrypt tcp byteflow and provide better interfaces for business layer
@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
 from ..tools.decorators import singleton
-from ..transmission.tcpservice import Connection, Ops, TcpService
+from ..tools.events import Ops
+from ..transmission.tcpservice import Connection, TcpService
 from .protocol import Package
+
 
 
 @dataclass
