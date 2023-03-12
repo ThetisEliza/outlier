@@ -1,10 +1,18 @@
+'''
+Date: 2023-03-08 23:10:22
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-12 15:18:14
+FilePath: /outlier/test/test_threadpool.py
+'''
 import sys
 import time
 import unittest
 from pathlib import Path
-from tools.threadpool import ThreadPool
 
-sys.path.append(Path(__file__).parent.parent / "src" / "outlier")
+
+# sys.path.append(Path(__file__).parent.parent / "src")
+
+from outlier.tools.threadpool import ThreadPool
 
 class testThreadPool(unittest.TestCase):
     def test_norm(self):
