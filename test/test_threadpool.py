@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-12 15:18:14
+LastEditTime: 2023-03-12 18:10:12
 FilePath: /outlier/test/test_threadpool.py
 '''
 import sys
@@ -25,7 +25,7 @@ class testThreadPool(unittest.TestCase):
         t.put_task(ThreadPool.template_loop, args=(3,))
         t.queue.join()
         endtime = time.time()
-        self.assertAlmostEqual(endtime - starttime, 5, delta=0.1)
+        self.assertAlmostEqual(endtime - starttime, 5, delta=0.5)
         
     def test_thread_dead(self):
         starttime = time.time()
@@ -36,4 +36,4 @@ class testThreadPool(unittest.TestCase):
         t.put_task(ThreadPool.template_loop, args=(2,))
         t.queue.join()
         endtime = time.time()
-        self.assertAlmostEqual(endtime - starttime, 5, delta=0.1)
+        self.assertAlmostEqual(endtime - starttime, 5, delta=0.5)

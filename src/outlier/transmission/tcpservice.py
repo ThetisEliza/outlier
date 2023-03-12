@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-10 17:38:05
+LastEditTime: 2023-03-12 20:16:03
 FilePath: /outlier/src/outlier/transmission/tcpservice.py
 
 This module is to provide stable and reliable layer communication as tcp protocol
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Dict
 
-from ..tools.aux import Ops
+from ..tools.events import Ops
 from ..tools.decorators import onexit, singleton
 from ..tools.threadpool import ThreadPool
 
