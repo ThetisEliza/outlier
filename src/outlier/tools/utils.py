@@ -1,13 +1,12 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 16:55:08
+LastEditTime: 2023-03-11 12:59:09
 FilePath: /outlier/src/outlier/tools/utils.py
 '''
 import logging
-from logging import handlers
 import socket
-import sys
+from logging import handlers
 
 FORMAT = '%(asctime)s - %(message)s'
 
