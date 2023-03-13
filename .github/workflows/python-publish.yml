@@ -35,4 +35,6 @@ jobs:
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        skip-existing: true
         password: ${{ secrets.PYPI_API_TOKEN }}
+        
