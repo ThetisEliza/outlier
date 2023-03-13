@@ -1,3 +1,9 @@
+<!--
+ * @Date: 2023-02-26 11:12:35
+ * @LastEditors: ThetisEliza wxf199601@gmail.com
+ * @LastEditTime: 2023-03-13 11:06:42
+ * @FilePath: /outlier/DEVLOG.md
+-->
 ## Development log
 
 11.16 
@@ -13,7 +19,6 @@
 12.05
 - add log system
 
-
 12.27
 - add active sync feature
 - add rotatating
@@ -26,6 +31,12 @@
 - Finished the Decorator Structure to register bussiness functions on both server and client
 - Some Efforts are still required to make it cleaner and more beautiful
 
-
 2.24
 - I pushed it to pypi ~! See: [https://pypi.org/project/outlierchat/]
+
+3.07
+- I finished the whole refactor work and that works pretty.
+
+3.12
+- I add package action and publish action on github. Now we can have some tests and publishment automatically.
+
