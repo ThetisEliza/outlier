@@ -46,7 +46,6 @@ class Client(ClientBizService):
         return BizRequest(param=self.name)
     
     
-    
     @bizclnt(state=State.Room, invokeptn="^(?!\$).+", bindto=Server.chat, recall=show_chat)
     def chat(self, inputs=None, *args, **kwargs) -> BizRequest:
         from datetime import datetime

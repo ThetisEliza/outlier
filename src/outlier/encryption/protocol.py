@@ -1,36 +1,91 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-09 20:36:08
+LastEditTime: 2023-03-13 20:13:55
 FilePath: /outlier/src/outlier/encryption/protocol.py
 
 '''
 
+import base64
 import hashlib
 import json
 from datetime import datetime
 
+import rsa
+from pyDes import CBC, PAD_PKCS5, des
+
 KEY = "asdqwezxc"
 
-class Encrption:    
-    def entrypt(data:str, key=KEY) -> bytes:
-        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
+class Encryption:
+    @classmethod
+    def encrypt(cls, data:bytes, key=KEY) -> bytes:
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
-        for b in data.encode('ascii'):
+        for b in data:
             b ^= hashcode
             hashcode = b
             out.append(b)
         return bytes(out)  
-        
-    def decrypt(data:bytes, key=KEY) -> str:
-        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 128
+    
+    @classmethod
+    def decrypt(cls, data:bytes, key=KEY) -> bytes:
+        hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
         for b in data:
             pre_b = b
             b ^= hashcode
             hashcode = pre_b
             out.append(b)
-        return out.decode('ascii')
+        return bytes(out)  
+    
+
+class Base64Encrption(Encryption):
+    @classmethod
+    def encrypt(cls, content: bytes, key=None) -> bytes:
+        bytesflow = base64.b64encode(content)
+        return bytesflow
+
+    @classmethod
+    def decrypt(cls, flow: bytes, key=None) -> bytes:
+        origin = base64.b64decode(flow)
+        return origin
+    
+    
+class DES(Encryption):
+    SALT = "outlier_bypassed_you"
+    
+    
+    @classmethod
+    def encrypt(cls, content: bytes, key = "") -> bytes:
+        key = (key + DES.SALT)[:8]
+        k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
+        bytesflow = k.encrypt(content, padmode=PAD_PKCS5)
+        return bytesflow
+
+    @classmethod
+    def decrypt(cls, flow: bytes, key = "") -> bytes:
+        key = (key + DES.SALT)[:8]
+        k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
+        return k.decrypt(flow, padmode=PAD_PKCS5)
+
+    
+class RSA(Encryption):
+    pub, pri = rsa.newkeys(1024)
+    @classmethod
+    def generate_keys(cls, n=1024):
+        RSA.pub, RSA.pri = rsa.newkeys(n)
+    
+    @classmethod
+    def encrypt(cls, content: bytes):
+        content = Base64Encrption.encrypt(content)
+        return rsa.encrypt(content, RSA.pub)
+        
+    @classmethod
+    def decrypt(cls, flow: bytes):
+        flow = rsa.decrypt(flow, RSA.pri)
+        return Base64Encrption.decrypt(flow)
+    
+    
     
 class Package:
     """Package for communication, encapsuling `timestamp`, `cmd` and parameters,
@@ -56,23 +111,21 @@ class Package:
         self.data[Package.CMD] = cmd
         return self
     
-    def encrypt(self) -> bytes:
+    def encrypt(self, cls = Base64Encrption, key = None) -> bytes:
         try:
-            data = json.dumps(self.data)
-            return Encrption.entrypt(data)
+            data = json.dumps(self.data).encode()
+            return cls.encrypt(data)
         except json.JSONDecodeError as e:
-            # print(e)
+            print(e)
             return b""
         
     @staticmethod
-    def decrypt(byteflow: bytes) -> 'Package':
+    def decrypt(byteflow: bytes, cls = Base64Encrption, key = None) -> 'Package':
         try:
-            data = Encrption.decrypt(byteflow)
-            # print(data)
+            data = cls.decrypt(byteflow).decode()
             data = json.loads(data)
             return Package(**data)
         except json.JSONDecodeError as e:
-            # print(e)
             return Package()
     
     @staticmethod

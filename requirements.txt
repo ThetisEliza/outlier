@@ -3,3 +3,6 @@ setuptools
 wheel
 twine
 
+# Encryption libs
+pyDes
+rsa
