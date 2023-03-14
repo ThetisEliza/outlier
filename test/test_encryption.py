@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-13 19:17:55
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 18:03:39
+LastEditTime: 2023-03-14 18:22:12
 FilePath: /outlier/test/test_encryption.py
 '''
 import unittest
@@ -21,7 +21,7 @@ class TestEncryption(unittest.TestCase):
             "{'timestamp': 1678706203.87447, 'cmd': 'enterroom', 'param': 'Create and enter room 1'}",
             "⚔️"
             "(*^▽^*)",
-            open(__file__).read(),
+            open(__file__, encoding='utf-8').read(),
         ]
     
     
@@ -53,9 +53,9 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             if len(test_str) < 117:
                 origin = test_str.encode()
-                encrypted = RSA.encrypt(origin)
+                encrypted = RSA.encrypt(origin, RSA.pub)
                 print(encrypted)
-                decrypted = RSA.decrypt(encrypted)
+                decrypted = RSA.decrypt(encrypted, RSA.pri)
                 self.assertEqual(origin, decrypted)
         
         

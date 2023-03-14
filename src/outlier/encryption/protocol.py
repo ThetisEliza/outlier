@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 17:46:57
+LastEditTime: 2023-03-14 18:19:09
 FilePath: /outlier/src/outlier/encryption/protocol.py
 
 '''
@@ -59,7 +59,7 @@ class DES(Encryption):
     
     
     @classmethod
-    def encrypt(cls, content: bytes, key = "") -> bytes:
+    def encrypt(cls, content: bytes, key = b"") -> bytes:
         key = (key + DES.SALT)[:8]
         k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
         bytesflow = k.encrypt(content, padmode=PAD_PKCS5)
@@ -67,7 +67,7 @@ class DES(Encryption):
         return bytesflow
 
     @classmethod
-    def decrypt(cls, flow: bytes, key = "") -> bytes:
+    def decrypt(cls, flow: bytes, key = b"") -> bytes:
         key = (key + DES.SALT)[:8]
         flow = Base64Encrption.decrypt(flow)
         k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
