@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-13 20:13:55
+LastEditTime: 2023-03-14 14:04:27
 FilePath: /outlier/src/outlier/encryption/protocol.py
 
 '''
@@ -19,6 +19,7 @@ KEY = "asdqwezxc"
 class Encryption:
     @classmethod
     def encrypt(cls, data:bytes, key=KEY) -> bytes:
+        return data
         hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
         for b in data:
@@ -29,6 +30,7 @@ class Encryption:
     
     @classmethod
     def decrypt(cls, data:bytes, key=KEY) -> bytes:
+        return data
         hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
         for b in data:
@@ -52,7 +54,7 @@ class Base64Encrption(Encryption):
     
     
 class DES(Encryption):
-    SALT = "outlier_bypassed_you"
+    SALT = b"outlier_bypassed_you"
     
     
     @classmethod
@@ -60,13 +62,16 @@ class DES(Encryption):
         key = (key + DES.SALT)[:8]
         k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
         bytesflow = k.encrypt(content, padmode=PAD_PKCS5)
+        bytesflow = Base64Encrption.encrypt(bytesflow)
         return bytesflow
 
     @classmethod
     def decrypt(cls, flow: bytes, key = "") -> bytes:
         key = (key + DES.SALT)[:8]
+        flow = Base64Encrption.decrypt(flow)
         k = des(key, CBC, key, pad=None, padmode=PAD_PKCS5)
-        return k.decrypt(flow, padmode=PAD_PKCS5)
+        flow = k.decrypt(flow, padmode=PAD_PKCS5)
+        return flow
 
     
 class RSA(Encryption):
@@ -76,13 +81,13 @@ class RSA(Encryption):
         RSA.pub, RSA.pri = rsa.newkeys(n)
     
     @classmethod
-    def encrypt(cls, content: bytes):
+    def encrypt(cls, content: bytes, pub):
         content = Base64Encrption.encrypt(content)
-        return rsa.encrypt(content, RSA.pub)
+        return rsa.encrypt(content, pub)
         
     @classmethod
-    def decrypt(cls, flow: bytes):
-        flow = rsa.decrypt(flow, RSA.pri)
+    def decrypt(cls, flow: bytes, pri):
+        flow = rsa.decrypt(flow, pri)
         return Base64Encrption.decrypt(flow)
     
     
@@ -114,18 +119,17 @@ class Package:
     def encrypt(self, cls = Base64Encrption, key = None) -> bytes:
         try:
             data = json.dumps(self.data).encode()
-            return cls.encrypt(data)
-        except json.JSONDecodeError as e:
-            print(e)
+            return  cls.encrypt(data, key)
+        except (json.JSONDecodeError, UnicodeEncodeError) as e:
             return b""
         
     @staticmethod
     def decrypt(byteflow: bytes, cls = Base64Encrption, key = None) -> 'Package':
         try:
-            data = cls.decrypt(byteflow).decode()
+            data = cls.decrypt(byteflow, key).decode()
             data = json.loads(data)
             return Package(**data)
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
             return Package()
     
     @staticmethod

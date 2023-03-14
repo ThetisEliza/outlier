@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-12 20:16:03
+LastEditTime: 2023-03-14 11:52:23
 FilePath: /outlier/src/outlier/transmission/tcpservice.py
 
 This module is to provide stable and reliable layer communication as tcp protocol
@@ -50,7 +50,8 @@ class TcpService:
             byteflow (bytes): data
             conn (Connection, optional): connection.
         """
-        if conn:    
+        if conn:
+            logging.debug(f"[Tcp layer]\tsending {conn.addr}, {byteflow}")
             conn.sock.send(byteflow)
             
         
@@ -91,7 +92,7 @@ class TcpService:
     def close(self, *args):
         """Exiting method for close `loop`, `epoll`, `thread pool` and `socket`
         """
-        logging.debug(f"[Tcp layer] close")
+        logging.debug(f"[Tcp layer]\tclose")
         self.loop = False
         # self.epctl.close()
         self.threadpool.close()
@@ -110,7 +111,8 @@ class TcpListenService(TcpService):
         
         
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        logging.debug(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        # logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {byteflow}")
         if ops == Ops.Add:
             self.conns[fd] = conn
             # self.epctl.register(conn.sock, select.EPOLLIN)
@@ -214,5 +216,5 @@ class TcpConnectService(TcpService):
                         
 
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        logging.debug(f"[Tcp layer] recall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
+        logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         self.upper_rchandle(ops, conn, byteflow, *args)

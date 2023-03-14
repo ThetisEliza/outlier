@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-12 20:57:44
+LastEditTime: 2023-03-14 11:48:34
 FilePath: /outlier/src/outlier/biz/bizservice.py
 
 This is the key layer for bussniness implementation. We use server 
@@ -164,7 +164,7 @@ class ServerBizService(BizService):
         
     
     def rchandle(self, ops: Ops, session: Session, package: Package, *args):
-        logging.debug(f"[Biz Layer] recall {ops} {session.conn.addr} {package}")
+        logging.debug(f"[Biz Layer]\trecall {ops} {session.conn.addr} {package}")
         bizreq = self._unpack_req(package)
         user = self.users.get(session.conn.addr)
         if ops == Ops.Add:
@@ -190,9 +190,8 @@ class ServerBizService(BizService):
             bcsess = map(lambda u: u.sess, bcusers)
             self.sessservice.send_group(bc, *bcsess)
         
-        
-
-        
+                    
+     
         
 
     
