@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 14:04:27
+LastEditTime: 2023-03-14 17:46:57
 FilePath: /outlier/src/outlier/encryption/protocol.py
 
 '''
@@ -10,16 +10,18 @@ import base64
 import hashlib
 import json
 from datetime import datetime
+import random
 
 import rsa
 from pyDes import CBC, PAD_PKCS5, des
 
 KEY = "asdqwezxc"
 
+    
+
 class Encryption:
     @classmethod
     def encrypt(cls, data:bytes, key=KEY) -> bytes:
-        return data
         hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
         for b in data:
@@ -30,7 +32,6 @@ class Encryption:
     
     @classmethod
     def decrypt(cls, data:bytes, key=KEY) -> bytes:
-        return data
         hashcode = int(hashlib.md5(key.encode()).hexdigest(), 16) % 256
         out = bytearray()
         for b in data:
@@ -76,6 +77,10 @@ class DES(Encryption):
     
 class RSA(Encryption):
     pub, pri = rsa.newkeys(1024)
+    @classmethod
+    def load_public_key(cls, pub: bytes) -> rsa.PublicKey:
+        return rsa.PublicKey.load_pkcs1(pub)
+    
     @classmethod
     def generate_keys(cls, n=1024):
         RSA.pub, RSA.pri = rsa.newkeys(n)

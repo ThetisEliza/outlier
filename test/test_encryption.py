@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-13 19:17:55
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 14:03:03
+LastEditTime: 2023-03-14 18:03:39
 FilePath: /outlier/test/test_encryption.py
 '''
 import unittest
@@ -29,7 +29,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = Encryption.encrypt(origin)
-            # print(encrypted)
+            print(encrypted)
             decrypted = Encryption.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -37,7 +37,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = Base64Encrption.encrypt(origin)
-            # print(encrypted)
+            print(encrypted)
             decrypted = Base64Encrption.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -45,7 +45,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = DES.encrypt(origin)
-            # print(encrypted)
+            print(encrypted)
             decrypted = DES.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -54,7 +54,7 @@ class TestEncryption(unittest.TestCase):
             if len(test_str) < 117:
                 origin = test_str.encode()
                 encrypted = RSA.encrypt(origin)
-                # print(encrypted)
+                print(encrypted)
                 decrypted = RSA.decrypt(encrypted)
                 self.assertEqual(origin, decrypted)
         

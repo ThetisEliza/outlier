@@ -8,7 +8,7 @@ from .biz.bizservice import BizRequest, ClientBizService, State, bizclnt
 from .encryption.sessionservice import ConnectSessService, SessionService
 from .transmission.tcpservice import TcpConnectService
 
-from .tools.utils import initlogger
+from .tools.utils import RandomGen, initlogger
 from .server import Server
 
 class Client(ClientBizService):
@@ -20,7 +20,7 @@ class Client(ClientBizService):
         self.name = kwargs.get('name')
         
     def show_msg(self, package):
-        print(f"{package.get_field('param')}")
+        print(f"{package.get_field('param')}\n")
         
     def show_chat(self, package):
         cm = package.get_field('param')
@@ -128,7 +128,13 @@ class Client(ClientBizService):
     def start(self):
         super().start()
         time.sleep(0.5)
+        
+        while not self.sessservice.ready:
+            print("Waiting for channel ready")
+            time.sleep(1)
+        time.sleep(1)
         self.connect()
+        
         while True:
             a = input()
             self.process_input(a)
@@ -144,6 +150,7 @@ def main():
     argparse.add_argument("-n", "--name", required=True, type=str)
     argparse.add_argument("-i", "--ip",   required=True, type=str)
     argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
+    argparse.add_argument("-k", "--key",  required=False, type=str, default=RandomGen.getrandomvalue()[:6])
         
     kwargs = vars(argparse.parse_args())
     initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    

@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 11:52:23
+LastEditTime: 2023-03-14 18:06:24
 FilePath: /outlier/src/outlier/transmission/tcpservice.py
 
 This module is to provide stable and reliable layer communication as tcp protocol
@@ -111,8 +111,7 @@ class TcpListenService(TcpService):
         
         
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
-        # logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
-        logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {byteflow}")
+        logging.debug(f"[Tcp layer]\trecall {ops}, {conn.addr}, {fd}, {len(byteflow) if byteflow else None}")
         if ops == Ops.Add:
             self.conns[fd] = conn
             # self.epctl.register(conn.sock, select.EPOLLIN)

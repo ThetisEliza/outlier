@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 11:48:34
+LastEditTime: 2023-03-14 18:08:44
 FilePath: /outlier/src/outlier/biz/bizservice.py
 
 This is the key layer for bussniness implementation. We use server 
@@ -189,10 +189,6 @@ class ServerBizService(BizService):
             bcusers = filter(lambda u: u != user if not bizresp.inc else True, bcusers)
             bcsess = map(lambda u: u.sess, bcusers)
             self.sessservice.send_group(bc, *bcsess)
-        
-                    
-     
-        
 
     
 def bizclnt(state:State, 
@@ -313,21 +309,7 @@ class ClientBizService(BizService):
     
     def gethelp(self, inputs=None, *args, **kwargs):
         print(f"Current at {self.atstate.name} - Supported commands:\n")
-        
         for func in self.acfuncs:
             if func.state == self.atstate and 'invokestr' in dir(func):
                 print(f"{func.help}\n")
                 
-        
-
-
-
-
-            
-        
-    
-    
-    
-    
-
-        
