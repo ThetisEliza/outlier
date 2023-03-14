@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 18:07:01
+LastEditTime: 2023-03-14 19:00:55
 FilePath: /outlier/src/outlier/encryption/sessionservice.py
 
 This module is to encrypt and decrypt tcp byteflow and provide better interfaces for business layer
@@ -54,7 +54,7 @@ class SessionService:
             byteflow = self._convert_package_to_byteflow(package, cls, key)
             self.tsservice.send(byteflow, session.conn)
         except OSError as e:
-            logging.warn(f"[Sess layer]\tsend failed {session.conn.addr} {e}")
+            logging.warn(f"[Sess layer]\tsend failed {session.conn.addr}")
             
             
     def send_group(self, bcpackage: Package, *sessions: Session):

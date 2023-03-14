@@ -1,7 +1,7 @@
 '''
 Date: 2023-03-10 02:53:02
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 18:13:04
+LastEditTime: 2023-03-14 18:59:31
 FilePath: /outlier/setup.py
 '''
 import setuptools
@@ -11,7 +11,7 @@ with open("README.md", encoding="utf8") as f:
     
 setuptools.setup(
     name="outlierchat",
-    version="0.0.16",
+    version="0.0.18",
     author="Thetis",
     author_email="736396627@qq.com",
     description="A simple server to build a secret channel for chat.",
@@ -25,5 +25,6 @@ setuptools.setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent"
     ],
+    install_requires=['rsa>=4.9', 'pyDes>=2.0.1'],
     python_requires='>3.6'
 )
