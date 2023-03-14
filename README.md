@@ -1,7 +1,7 @@
 <!--
  * @Date: 2023-01-07 22:59:34
  * @LastEditors: ThetisEliza wxf199601@gmail.com
- * @LastEditTime: 2023-03-13 11:09:01
+ * @LastEditTime: 2023-03-13 21:13:04
  * @FilePath: /outlier/README.md
 -->
 # ⚔️ OUTLIER
@@ -32,7 +32,7 @@ After setup. You can start a server just start the module outlier.server as
 python -m outlier.server [-i ip_addr] [-p port]
 ```
 
-Then you and your friends cat easily connect to the server
+Then you and your friends can easily connect to the server by
 ```shell
 python -m outlier.client -n name -i ip_addr [-p port]
 ```
@@ -44,6 +44,16 @@ how many people are in it. Then type `$room [room name]` to choose one room or b
 ## Note
 
 You should check you network configuration carefully and thus some knowledge about internet technology shoule be used, such as `NAT`. The ipv4 address and the port of the server should be correctly configured to find the server.
+
+## Feature
+
+We currently use a rolling dynamic asymmetric encrpytion algorithm to keep the channel untracked, which means once the channel is disconnected, NO ONE could recover the secret key. but it's very vulnerable to a fake server or MIIT attack.
+
+
+## Disclaimers
+
+This program is only for temporary secret communication channel and definitely CANNOT escape from decryption by professional security team especially when the source code is open. Thus before you 
+use this tool, you should know that we DO NOT take ANY responsiblility for any behaviours you take and the consequences that would come.
 
 
 ## Development log

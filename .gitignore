@@ -1,10 +1,19 @@
+# IDE
 .vscode
-log
+
+# pycache
 __pycache__
-plugins
-tmp
-nohup*
+
+# python build
 *egg-info
 dist
 build
+
+# project tmp files
+log
+tmp
+nohup*
+
+# project fix files
 *backup
+src/run_*
