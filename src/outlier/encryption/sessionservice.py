@@ -7,8 +7,10 @@ FilePath: /outlier/src/outlier/encryption/sessionservice.py
 This module is to encrypt and decrypt tcp byteflow and provide better interfaces for business layer
 '''
 import logging
+import time
 from dataclasses import dataclass
-from typing import Any, Dict, Literal
+from rsa.pkcs1 import DecryptionError
+from typing import Any, Dict
 
 from ..tools.decorators import singleton
 from ..tools.events import Ops
@@ -176,7 +178,9 @@ class ServerSessService(SessionService):
                     raise BuildChannelException("no `ack` found")
             elif session.state == 5:
                 return self._convert_byteflow_to_package(byteflow, DES, session.secret)
-        except Exception as e:
+        except (BuildChannelException, DecryptionError, ValueError) as e:
+            from traceback import print_exc
+            logging.debug(f"[Sess layer]\tbuild channel failed at {print_exc()} retrying")
             logging.warn(f"[Sess layer]\tbuild channel failed at {e}")
             session.state = 0
             session.secret = None
@@ -209,8 +213,9 @@ class ConnectSessService(SessionService):
         # 1. parse public key
         # 2. parse confirming secrete key and set secrete key
         # 3. user biz communication
-        package = self._channel_state_convert(self.session, byteflow, ops)
-        self.upper_rchandle(ops, self.session, package, *args)
+        if byteflow is not None:
+            package = self._channel_state_convert(self.session, byteflow, ops)
+            self.upper_rchandle(ops, self.session, package, *args)
         
         
     def _channel_state_convert(self, session: Session, byteflow: bytes, ops: Ops) -> Package:
@@ -236,16 +241,19 @@ class ConnectSessService(SessionService):
             Package: _description_
         """
         try:
-            import time
+            package = self._convert_byteflow_to_package(byteflow)
+            if package.get_field('session_state') == -1:
+                raise BuildChannelException("server confirming failded")
+                
             if session.state == 1:
                 # reveive secret
                 # send secret
                 # waiting for confirm
                 package = self._convert_byteflow_to_package(byteflow)
                 if package.get_field('session_pub') is not None:
-                    pub = package.get_field('session_pub').encode()
+                    pub = package.get_field('session_pub')
                     print(f"Get public key {pub}\n")
-                    pub = RSA.load_public_key(pub)
+                    pub = RSA.load_public_key(pub.encode())
                     secret = RSA.encrypt(self.key, pub)
                     print(f"Sending your secret key {self.key} on {secret}\n")
                     self.send(Package.buildpackage().add_field("session_secret", "_".join(str(a) for a in secret)))
@@ -259,23 +267,25 @@ class ConnectSessService(SessionService):
                 package = self._convert_byteflow_to_package(byteflow, DES, session.secret)
                 if package.get_field('session_confirm'):
                     self.send(Package.buildpackage().add_field("session_ack", True))
-                    print("Server confirmed your key\n")
+                    print(f"Server confirmed your key\n")
                     session.state = 5
                     self.ready = True
                     time.sleep(1)
-                    print("Channel built.\n")
+                    print(f"Channel built\n")
                 else:
                     raise BuildChannelException("no `session_confirm` found")
             elif session.state == 5:
                 return self._convert_byteflow_to_package(byteflow, DES, session.secret)
-        except Exception as e:
-            logging.debug(f"[Sess layer]\tbuild channel failed at {e} retrying")
+        except (Exception, ValueError) as e:
+            from traceback import print_exc
+            logging.debug(f"[Sess layer]\tbuild channel failed at {print_exc()} retrying")
             session.state = 1
             session.secret = None
-            print("--- RETRY ---")
             session.retry += 1
+            print("--- retry ---")
             if session.retry >= 5:
                 self.close()
-            self.send(Package.buildpackage(), session)
+            else:
+                self.send(Package.buildpackage(), session)
         return Package.buildpackage()
     

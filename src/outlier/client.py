@@ -1,4 +1,3 @@
-import logging
 import time
 from argparse import ArgumentParser
 from typing import List
@@ -126,18 +125,29 @@ class Client(ClientBizService):
         
         
     def start(self):
-        super().start()
-        time.sleep(0.5)
+        def waituntilready():
+            retrials = 0
+            while True:
+                retrials += 1
+                time.sleep(3)
+                if self.sessservice.ready and self.sessservice.tsservice.loop:
+                    break
+                print(f"Waiting for channel ready for {retrials * 5} / {5 * 5} secs")
+                if retrials > 4:
+                    raise Exception("channel build failed")
+            retrials = 0
+            
+        try:
+            super().start()
+            waituntilready()
+            self.connect()
+            while True:
+                a = input()
+                self.process_input(a)
+        except Exception as e:
+            print(e)
+            self.close()
         
-        while not self.sessservice.ready:
-            print("Waiting for channel ready")
-            time.sleep(1)
-        time.sleep(1)
-        self.connect()
-        
-        while True:
-            a = input()
-            self.process_input(a)
             
             
             
@@ -146,7 +156,7 @@ class Client(ClientBizService):
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
-    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-l", "--log", default="error", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
     argparse.add_argument("-n", "--name", required=True, type=str)
     argparse.add_argument("-i", "--ip",   required=True, type=str)
     argparse.add_argument("-p", "--port", required=False, type=int, default=8809)

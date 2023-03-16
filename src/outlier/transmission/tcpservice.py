@@ -10,6 +10,7 @@ This module is to provide stable and reliable layer communication as tcp protoco
 import logging
 import select
 import socket
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Dict
@@ -195,7 +196,12 @@ class TcpConnectService(TcpService):
         self.startloop()
     
     def _loop(self):
-        self.sock.connect((self.kwargs.get('ip'), self.kwargs.get('port')))
+        try:
+            ip, port = self.kwargs.get('ip'), self.kwargs.get('port')
+            self.sock.connect((ip, port))
+        except (ConnectionRefusedError, socket.gaierror) as e:
+            print(f"Connecting to server {ip}:{port} failed, please check your ip and port carefully.")
+            self.close()
         # self.epctl.register(self.sock, select.EPOLLIN)  
         self.rlist.append(self.sock.fileno())     
         self.conn.addr = self.sock.getsockname()
@@ -210,7 +216,8 @@ class TcpConnectService(TcpService):
                             raise ConnectionAbortedError()
                         self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, byteflow))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
-                        logging.debug("server failed")
+                        logging.debug("[Tcp layer]\tserver failed")
+                        print(f"Server failed")
                         self.close()
                         
 
