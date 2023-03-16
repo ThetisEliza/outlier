@@ -8,7 +8,7 @@ import unittest
 import sys
 from pathlib import Path
 
-sys.path.append(Path(__file__).parent.parent / "src" )
+sys.path.append(str(Path(__file__).parent.parent / "src" ))
 
 from outlier.encryption.protocol import DES, RSA, Base64Encrption, Encryption
 
@@ -29,7 +29,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = Encryption.encrypt(origin)
-            print(encrypted)
+            # print(encrypted)
             decrypted = Encryption.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -37,7 +37,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = Base64Encrption.encrypt(origin)
-            print(encrypted)
+            # print(encrypted)
             decrypted = Base64Encrption.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -45,7 +45,7 @@ class TestEncryption(unittest.TestCase):
         for test_str in TestEncryption.test_contents:
             origin = test_str.encode()
             encrypted = DES.encrypt(origin)
-            print(encrypted)
+            # print(encrypted)
             decrypted = DES.decrypt(encrypted)
             self.assertEqual(origin, decrypted)
             
@@ -54,7 +54,7 @@ class TestEncryption(unittest.TestCase):
             if len(test_str) < 117:
                 origin = test_str.encode()
                 encrypted = RSA.encrypt(origin, RSA.pub)
-                print(encrypted)
+                # print(encrypted)
                 decrypted = RSA.decrypt(encrypted, RSA.pri)
                 self.assertEqual(origin, decrypted)
         
