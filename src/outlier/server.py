@@ -26,7 +26,6 @@ class Server(ServerBizService):
         self.rooms: List[Room] = [Room("Alpha"), Room("Bravo"), Room("Charlie")]
         self.threadpool = ThreadPool()
         self.threadpool.put_task(self._room_guard)
-        self.rooms[0].lastact = datetime.now().timestamp()
         
     def _findroom(self, _x: Union[str, int]) -> Union[Room, None]:
         for room in self.rooms:
@@ -50,7 +49,7 @@ class Server(ServerBizService):
             rms = []
             for room in self.rooms:
                 if room.lastact != -1 and datetime.now().timestamp() - room.lastact > max_idle:
-                    logging.info(f"{Room} idled for {max_idle} closed")
+                    logging.info(f"{room} idled for {max_idle} will be closed, clear all clients.")
                     for user in self._findusers(room):
                         self.leftroom(user, None)
                     rms.append(room)
@@ -133,8 +132,6 @@ def main():
     kwargs = vars(argparse.parse_args())
     initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    
 
-    # logger = logging.getLogger("Server")
-    
     logging.info(f"Check init parameters {kwargs}")
     
     logging.info(f"Build tcp service")

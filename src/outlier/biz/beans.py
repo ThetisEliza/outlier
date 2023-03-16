@@ -58,7 +58,7 @@ class Room:
         self.passwd:  str               = None
         self.name:    str               = name
         self.connects:int               = 0
-        self.lastact: float             = -1
+        self.lastact: float             = datetime.now().timestamp()
         Room.index += 1
         
     
