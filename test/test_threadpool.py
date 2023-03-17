@@ -9,8 +9,7 @@ import time
 import unittest
 from pathlib import Path
 
-
-# sys.path.append(Path(__file__).parent.parent / "src")
+sys.path.append(str(Path(__file__).parent.parent / "src" ))
 
 from outlier.tools.threadpool import ThreadPool
 

@@ -15,7 +15,7 @@ from ..tools.decorators import singleton
 class WorkThread(threading.Thread):
     def __init__(self, target):
         super(WorkThread, self).__init__(target=target)
-        self.setDaemon(True)
+        self.daemon = True
         self.start()
         
 @singleton
