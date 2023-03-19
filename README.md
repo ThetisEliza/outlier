@@ -47,7 +47,7 @@ You should check you network configuration carefully and thus some knowledge abo
 
 ## Feature
 
-We currently use a rolling dynamic asymmetric encrpytion algorithm to keep the channel untracked, which means once the channel is disconnected, NO ONE could recover the secret key. but it's very vulnerable to a fake server or MIIT attack.
+We currently use a rolling dynamic asymmetric encrpytion algorithm to keep the channel untracked. The server rolls a pair of public key and private key with RSA algorithm to transmit secret key for a symmetic encryption channel, then the encryped secret key can be safe once the key pair rolls. Only if the network traffic was completely recorded, the encrypting key pais of secret would be lost forever. This means once the channel is disconnected, NO ONE could recover the secret key. However, this design keeps no RSA certificated public key, so anyone could mock a fake one, thus, it's very vulnerable to a fake server or MIIT attack.
 
 
 ## Disclaimers
@@ -59,3 +59,10 @@ use this tool, you should know that we DO NOT take ANY responsiblility for any b
 ## Development log
 
 See [DEVLOG.md](https://github.com/ThetisEliza/outlier/blob/main/DEVLOG.md)
+
+
+## Copyright and License Information
+
+Copyright Phoenix Wang, Micca shi, 2023-2024
+
+Distributed under the term of [Apache 2,0 license](https://github.com/ThetisEliza/outlier/blob/main/LICENSE)
