@@ -10,10 +10,9 @@ from .transmission.tcpservice import TcpConnectService
 
 from .tools.utils import RandomGen, initlogger
 from .server import Server
-from .tools.chatterminal import ct
-
 
 if sys.platform != "win32":
+    from .tools.chatterminal import ct
     print = ct.chatoutput
     input = ct.chatinput
 
