@@ -15,7 +15,12 @@ if sys.platform != 'win32':
     class ChatTerminal:
         def __init__(self, log_file_name = None) -> None:
             self.fd = sys.stdin.fileno()
-            self.settings = termios.tcgetattr(self.fd)
+            self.valid = False
+            try:
+                self.settings = termios.tcgetattr(self.fd)
+                self.valid = True
+            except:
+                self.settings = None
             self.buffer = []
             self.history = []
             
@@ -26,14 +31,18 @@ if sys.platform != 'win32':
                 self.f = open(log_file_name, 'w')
             
         def _rdchar(self):
-            try:
-                tty.setraw(self.fd)
+            if self.valid:
+                try:
+                    tty.setraw(self.fd)
+                    ch = sys.stdin.read(1)
+                except:
+                    print("tty ends")
+                finally:
+                    termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
+                return ch
+            else:
                 ch = sys.stdin.read(1)
-            except:
-                print("tty ends")
-            finally:
-                termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
-            return ch
+                return ch
         
         def readkey(self):
             # some key input is a combination of `ESC`(0x1b) + `[` (0x5b) + other, such as up, down
@@ -143,13 +152,7 @@ if sys.platform != 'win32':
             sys.stdout.write("\n\r" + output + "\n")
             sys.stdout.write("\r"+''.join(self.buffer))
         
-        @register        
-        def close(self):
-            print("Closed chat terminal system")
-            if self.f:
-                self.f.close()
-            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
-            
+        
     ct = ChatTerminal()
 
 

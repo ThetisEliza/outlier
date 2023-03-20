@@ -13,8 +13,9 @@ from .server import Server
 
 if sys.platform != "win32":
     from .tools.chatterminal import ct
-    print = ct.chatoutput
-    input = ct.chatinput
+    if ct.valid:
+        print = ct.chatoutput
+        input = ct.chatinput
 
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:

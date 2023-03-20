@@ -54,8 +54,9 @@ from ..tools.events import Ops
 
 if sys.platform != "win32":
     from ..tools.chatterminal import ct
-    print = ct.chatoutput
-    input = ct.chatinput
+    if ct.valid:
+        print = ct.chatoutput
+        input = ct.chatinput
 
 class State(Enum):
     IDLE = -1
