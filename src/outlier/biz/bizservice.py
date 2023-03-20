@@ -42,6 +42,7 @@ We have three phase in total.
 import inspect
 import logging
 import re
+import sys
 import time
 import signal
 from dataclasses import dataclass
@@ -50,7 +51,11 @@ from typing import Any, Callable, Dict, List
 
 from ..encryption.sessionservice import Package, Session, SessionService
 from ..tools.events import Ops
+from ..tools.chatterminal import ct
 
+if sys.platform != "win32":
+    print = ct.chatoutput
+    input = ct.chatinput
 
 class State(Enum):
     IDLE = -1
