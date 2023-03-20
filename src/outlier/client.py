@@ -1,4 +1,5 @@
 import time
+import sys
 from argparse import ArgumentParser
 from typing import List
 
@@ -9,6 +10,12 @@ from .transmission.tcpservice import TcpConnectService
 
 from .tools.utils import RandomGen, initlogger
 from .server import Server
+
+if sys.platform != "win32":
+    from .tools.chatterminal import ct
+    if ct.valid:
+        print = ct.chatoutput
+        input = ct.chatinput
 
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:

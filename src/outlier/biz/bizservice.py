@@ -1,8 +1,8 @@
 '''
 Date: 2023-03-08 23:10:22
 LastEditors: ThetisEliza wxf199601@gmail.com
-LastEditTime: 2023-03-14 18:08:44
-FilePath: /outlier/src/outlier/biz/bizservice.py
+LastEditTime: 2023-03-20 19:19:27
+FilePath: \outlier\src\outlier\biz\bizservice.py
 
 This is the key layer for bussniness implementation. We use server 
 as the `stem` update way, client follows. we use some way to add the biz
@@ -42,6 +42,7 @@ We have three phase in total.
 import inspect
 import logging
 import re
+import sys
 import time
 import signal
 from dataclasses import dataclass
@@ -51,6 +52,11 @@ from typing import Any, Callable, Dict, List
 from ..encryption.sessionservice import Package, Session, SessionService
 from ..tools.events import Ops
 
+if sys.platform != "win32":
+    from ..tools.chatterminal import ct
+    if ct.valid:
+        print = ct.chatoutput
+        input = ct.chatinput
 
 class State(Enum):
     IDLE = -1

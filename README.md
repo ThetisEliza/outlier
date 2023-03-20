@@ -65,4 +65,4 @@ See [DEVLOG.md](https://github.com/ThetisEliza/outlier/blob/main/DEVLOG.md)
 
 Copyright Phoenix Wang, Micca shi, 2023-2024
 
-Distributed under the term of [Apache 2,0 license](https://github.com/ThetisEliza/outlier/blob/main/LICENSE)
+Distributed under the term of [Apache 2.0 license](https://github.com/ThetisEliza/outlier/blob/main/LICENSE)
