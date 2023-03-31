@@ -15,21 +15,79 @@ class ChatTerminal:
     def _readkey(self) -> Tuple[bytes, bytes]:
         ...
         
+    
+    def _upper_command(self):
+        if 0 <= self.his_idx - 1 < len(self.history):
+            self.his_idx -= 1
+            sys.stdout.write("\r"+" "*3*len(self.buffer))
+            self.buffer.clear()
+            self.buffer.extend(list(self.history[self.his_idx]))
+            sys.stdout.write('\r'+''.join(self.buffer))
+            self.cursor_idx = len(self.buffer)
+            sys.stdout.flush()
+            
+            
+    def _belower_command(self):
+        if 0 < self.his_idx + 1 < len(self.history):
+            self.his_idx += 1
+            sys.stdout.write("\r"+" "*3*len(self.buffer))
+            self.buffer.clear()
+            self.buffer.extend(self.history[self.his_idx])
+            sys.stdout.write('\r'+''.join(self.buffer))
+            self.cursor_idx = len(self.buffer)
+            sys.stdout.flush()
+            
+        elif self.his_idx + 1 == len(self.history):
+            self.his_idx += 1
+            sys.stdout.write("\r"+" "*3*len(self.buffer))
+            self.buffer.clear()
+            self.buffer.extend([])
+            sys.stdout.write('\r'+''.join(self.buffer))
+            self.cursor_idx = len(self.buffer)
+            sys.stdout.flush()
+            
+        
     def _insert(self, char: bytes, idx: int) -> None:
-        ...
+        self.buffer.insert(idx, char.decode('utf-8'))
+        refresh_chars = ''.join(self.buffer[idx:])
+        sys.stdout.write(refresh_chars)
+        sys.stdout.write('\r'+''.join(self.buffer[:idx+1]))
+        sys.stdout.flush()
+        self.cursor_idx += 1
 
     def _deleteformer(self, idx: int) -> None:
-        ...
+        if 0 <= idx < len(self.buffer):
+            self.buffer.pop(idx)
+            self._write_to(f"Check buffer {self.buffer}")
+            sys.stdout.write('\r'+''.join(self.buffer)+" ")
+            sys.stdout.write('\r'+''.join(self.buffer[:idx]))
+            sys.stdout.flush()
+            self.cursor_idx -= 1
         
     def _delete(self, idx: int) -> None:
-        ...
+        if 0 <= idx < len(self.buffer):
+            self.buffer.pop(idx)
+            sys.stdout.write('\r'+''.join(self.buffer) + " ")
+            sys.stdout.write('\r'+''.join(self.buffer[:idx]))
+            sys.stdout.flush()
         
-    def _output(self) -> None:
-        ...
+    def _output(self) -> str:
+        self.cursor_idx = 0
+        outputstr = "".join(self.buffer)
+        sys.stdout.write("\r"+" "*3*len(self.buffer))
+        self.buffer.clear()
+        sys.stdout.write("\r")
+        if len(outputstr):
+            self.history.append(outputstr)
+            self.his_idx = len(self.history)
+        sys.stdout.flush()
+        self._write_to(f"Check history {self.history}")
+        return outputstr
         
     def _move_cursor(self, idx: int) -> None:
         if 0 <= idx <= len(self.buffer):
-            ...
+            sys.stdout.write('\r'+''.join(self.buffer[:idx]))
+            self.cursor_idx = idx
         
     def _write_to(self, msg: str):
         if self.f: os.write(self.f.fileno(), f"{msg}\n".encode())
@@ -37,7 +95,7 @@ class ChatTerminal:
     def _parse_bytes(self, b: bytes) -> str:
         return "default"
         
-    def input(self, prompt=">>>"):
+    def input(self, prompt=">>>") -> str:
         while True:
             a, b = self._readkey()
             instru = self._parse_bytes(b)
@@ -45,7 +103,7 @@ class ChatTerminal:
             self._write_to(f"check inputting msg {a} {b} {instru}\n")
             
             if instru == "backspace":
-                self._deleteformer(self.cursor_idx)
+                self._deleteformer(self.cursor_idx - 1)
                 continue
             elif instru == "delete":
                 self._delete(self.cursor_idx)
@@ -62,11 +120,11 @@ class ChatTerminal:
                 self._move_cursor(self.cursor_idx - 1)
                 continue
             elif instru == "up":
-                ...
+                self._upper_command()
             elif instru == "down":
-                ...
+                self._belower_command()
             elif instru == "enter":
-                ...
+                return self._output()
             elif instru == "interrupt":
                 raise KeyboardInterrupt()
             elif instru == "ignore":
@@ -75,8 +133,16 @@ class ChatTerminal:
                 self._insert(a, self.cursor_idx)
                 
         
-    def output(self, output: str):
-        ...
+    def output(self, output: str) -> None:
+        if len(self.buffer):
+            sys.stdout.write("\r"+" "*3*len(self.buffer))
+            sys.stdout.write('\r'+output+"\n\r")
+            sys.stdout.write("\r"+"".join(self.buffer))
+            self._move_cursor(self.cursor_idx)
+        else:
+            sys.stdout.write('\r'+output+"\n\r")
+        sys.stdout.flush()
+        
         
 
 if sys.platform != 'win32':
@@ -120,10 +186,11 @@ if sys.platform != 'win32':
             if c3 != b'6' and c3 != b'5' and c3 != b'3':
                 return c3, c1 + c2 + c3
             c4 = _readchar()
-            return c4, c1 + c2 + c3 + c4
+            return     c4, c1 + c2 + c3 + c4
             
         def _parse_bytes(self, b: bytes) -> str:
             if b == b'\x7f':        return 'backspace'
+            if b == b'\r':          return 'enter'
             if b == b'\x1b[3~':     return 'delete'
             if b == b'\x1b[D':      return 'left'
             if b == b'\x1b[C':      return 'right'
@@ -169,9 +236,20 @@ else:
         
     ct = WinChatTerminal("tmp\\tmp.txt")
 
-# while True:
-#     a,b = ct._readkey()
-#     if a == b'q':
-#         break
 
-ct.input()
+if __name__ == '__main__':
+    from threading import Thread
+    import time
+
+    def rolling():
+        while True:
+            ct.output('123') 
+            time.sleep(1)
+        
+    t = Thread(target=rolling)
+    t.daemon = True
+    t.start()
+
+    while True:
+        out = ct.input()
+        ct.output(out)
