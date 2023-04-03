@@ -42,21 +42,20 @@ We have three phase in total.
 import inspect
 import logging
 import re
+import signal
 import sys
 import time
-import signal
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List
 
 from ..encryption.sessionservice import Package, Session, SessionService
+from ..tools.chatterminal import ct
 from ..tools.events import Ops
 
-if sys.platform != "win32":
-    from ..tools.chatterminal import ct
-    if ct.valid:
-        print = ct.chatoutput
-        input = ct.chatinput
+if ct.valid:
+    print = ct.output
+    input = ct.input
 
 class State(Enum):
     IDLE = -1

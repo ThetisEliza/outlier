@@ -1,6 +1,5 @@
 import sys
 import os
-from atexit import register
 from typing import Tuple
 
 
@@ -48,7 +47,7 @@ class ChatTerminal:
             
         
     def _insert(self, char: bytes, idx: int) -> None:
-        self.buffer.insert(idx, char.decode('utf-8'))
+        self.buffer.insert(idx, char.decode())
         refresh_chars = ''.join(self.buffer[idx:])
         sys.stdout.write(refresh_chars)
         sys.stdout.write('\r'+''.join(self.buffer[:idx+1]))
@@ -74,7 +73,7 @@ class ChatTerminal:
     def _output(self) -> str:
         self.cursor_idx = 0
         outputstr = "".join(self.buffer)
-        sys.stdout.write("\r"+" "*3*len(self.buffer))
+        sys.stdout.write("\r"+ " "*len("".join(self.buffer).encode()))
         self.buffer.clear()
         sys.stdout.write("\r")
         if len(outputstr):
@@ -124,7 +123,8 @@ class ChatTerminal:
             elif instru == "down":
                 self._belower_command()
             elif instru == "enter":
-                return self._output()
+                ot = self._output()
+                return ot
             elif instru == "interrupt":
                 raise KeyboardInterrupt()
             elif instru == "ignore":
@@ -135,7 +135,7 @@ class ChatTerminal:
         
     def output(self, output: str) -> None:
         if len(self.buffer):
-            sys.stdout.write("\r"+" "*3*len(self.buffer))
+            sys.stdout.write("\r"+ " "*len("".join(self.buffer).encode()))
             sys.stdout.write('\r'+output+"\n\r")
             sys.stdout.write("\r"+"".join(self.buffer))
             self._move_cursor(self.cursor_idx)
@@ -203,7 +203,7 @@ if sys.platform != 'win32':
             return super()._parse_bytes(b)
             
         
-    ct = PosixChatTerminal("tmp/tmp.txt")
+    ct = PosixChatTerminal()
     
 
 else:
@@ -211,45 +211,30 @@ else:
     class WinChatTerminal(ChatTerminal):
         def __init__(self, log_file_name=None) -> None:
             super().__init__(log_file_name)
+            self.valid = True
             
         def _readkey(self) -> Tuple[bytes, bytes]:
             def _readchar() -> bytes:
-                return msvcrt.getch()
+                return msvcrt.getwch().encode()
 
             c1 = _readchar()
-            if c1 != b'\xe0':
+            if c1 != b'\xc3\xa0':
                 return c1, c1
             c2 = _readchar()
             return c2, c1 + c2
         
         def _parse_bytes(self, b: bytes) -> str:
-            if b == b'\x08':  return 'backspace'
-            if b == b'\xe0S': return 'delete'
-            if b == b'\xe0K': return 'left'
-            if b == b'\xe0M': return 'right'
-            if b == b'\xe0H': return 'up'
-            if b == b'\xe0P': return 'down'
-            if b == b'\xe0G': return 'home'
-            if b == b'\xe0O': return 'end'
-            if b[:1] == b'\xe0': return 'ignore'
+            if b == b'\x08':            return 'backspace'
+            if b == b'\r':              return 'enter'
+            if b == b'\xc3\xa0S':       return 'delete'
+            if b == b'\xc3\xa0K':       return 'left'
+            if b == b'\xc3\xa0M':       return 'right'
+            if b == b'\xc3\xa0H':       return 'up'
+            if b == b'\xc3\xa0P':       return 'down'
+            if b == b'\xc3\xa0G':       return 'home'
+            if b == b'\xc3\xa0O':       return 'end'
+            if b == b'\x03':            return "interrupt"
+            if b[:-1] == b'\xc3\xa0':   return 'ignore'
             return super()._parse_bytes(b)
         
-    ct = WinChatTerminal("tmp\\tmp.txt")
-
-
-if __name__ == '__main__':
-    from threading import Thread
-    import time
-
-    def rolling():
-        while True:
-            ct.output('123') 
-            time.sleep(1)
-        
-    t = Thread(target=rolling)
-    t.daemon = True
-    t.start()
-
-    while True:
-        out = ct.input()
-        ct.output(out)
+    ct = WinChatTerminal()

@@ -1,21 +1,19 @@
-import time
 import sys
+import time
 from argparse import ArgumentParser
 from typing import List
 
 from .biz.beans import ChatMessage
 from .biz.bizservice import BizRequest, ClientBizService, State, bizclnt
 from .encryption.sessionservice import ConnectSessService, SessionService
+from .server import Server
+from .tools.chatterminal import ct
+from .tools.utils import RandomGen, initlogger
 from .transmission.tcpservice import TcpConnectService
 
-from .tools.utils import RandomGen, initlogger
-from .server import Server
-
-if sys.platform != "win32":
-    from .tools.chatterminal import ct
-    if ct.valid:
-        print = ct.chatoutput
-        input = ct.chatinput
+if ct.valid:
+    print = ct.output
+    input = ct.input
 
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
