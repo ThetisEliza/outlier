@@ -9,10 +9,11 @@ This module is to encrypt and decrypt tcp byteflow and provide better interfaces
 import logging
 import time
 from dataclasses import dataclass
-from rsa.pkcs1 import DecryptionError
 from typing import Any, Dict
 
-from ..tools.decorators import singleton
+from rsa.pkcs1 import DecryptionError
+
+from ..tools.decorators import onexit, singleton
 from ..tools.events import Ops
 from ..tools.threadpool import ThreadPool
 from ..tools.utils import RandomGen
@@ -74,6 +75,7 @@ class SessionService:
     def start(self):
         self.tsservice.startloop()
     
+    @onexit
     def close(self, *args):
         logging.debug(f"[Sess layer]\tclose with {args}")
         self.tsservice.close()

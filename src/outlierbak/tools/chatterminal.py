@@ -10,6 +10,7 @@ class ChatTerminal:
         self.his_idx = 0
         self.cursor_idx = 0
         self.f = open(log_file_name, 'w') if log_file_name else None
+        self.active = True
 
     def _readkey(self) -> Tuple[bytes, bytes]:
         ...
@@ -95,7 +96,7 @@ class ChatTerminal:
         return "default"
         
     def input(self, prompt=">>>") -> str:
-        while True:
+        while self.active:
             a, b = self._readkey()
             instru = self._parse_bytes(b)
             
@@ -131,7 +132,8 @@ class ChatTerminal:
                 ...
             elif instru == 'default':    
                 self._insert(a, self.cursor_idx)
-                
+            # else:
+                self.outputspecchar(b"\x1b[D")
         
     def output(self, output: str) -> None:
         if len(self.buffer):
@@ -143,7 +145,16 @@ class ChatTerminal:
             sys.stdout.write(f'\r{output}\n\r')
         sys.stdout.flush()
         
+    def outputspecchar(self, specchar: str) -> None:
+        ...
         
+    def close(self):
+        print("closing terminal")
+        if self.f:
+            self.f.close()
+        self.active = False
+        
+
 
 if sys.platform != 'win32':
     import termios
@@ -202,8 +213,21 @@ if sys.platform != 'win32':
             if b[:2] == b'\x1b[':   return 'ignore'
             return super()._parse_bytes(b)
             
+        def output(self, output: str) -> None:
+            # tty.setraw(self.fd)
+            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
+            super().output(output)
+            tty.setraw(self.fd)
+            
+        def outputspecchar(self, specchar: bytes) -> None:
+            os.write(self.fd, specchar)
+            
+        def close(self):
+            super().close()
+            termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
         
-    ct = PosixChatTerminal()
+    ct = PosixChatTerminal("tmp/tmp.txt")
+    
     
 
 else:

@@ -18,21 +18,22 @@ if ct.valid:
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
         super().__init__(sessservice, **kwargs)
-        
-        self.chatblock = False
         self.buffer: List[ChatMessage] = list()
         self.name = kwargs.get('name')
+        self.active = True
         
     def show_msg(self, package):
-        print(f"{package.get_field('param')}\n")
+        print(package.get_field('param'))
         
     def show_chat(self, package):
         cm = package.get_field('param')
         cm = ChatMessage.parse(cm)
-        if self.chatblock:
-            self.buffer.append(cm)
-        else:
-            print(cm.format())
+        self.buffer.append(cm)
+        ct.outputspecchar(b"\x1b[2J")
+        ct.outputspecchar(b'\x1b[H')
+        for a in self.buffer:
+            # ct.outputspecchar(b'\x15')
+            print(a.format())
     
     def connected(self, package):
         self.atstate = State.Hall
@@ -40,10 +41,6 @@ class Client(ClientBizService):
         
     def process_input(self, inputs: str):
         super().process_input(inputs)
-        time.sleep(0.5)
-        for cm in self.buffer:
-            print(cm.format())
-            
     
     @bizclnt(state=State.IDLE, bindto=Server.connectuser, recall=connected)
     def connect(self, inputs=None, *args, **kwargs) -> BizRequest:
@@ -115,24 +112,12 @@ class Client(ClientBizService):
         import subprocess
         subprocess.call('reset')
         return BizRequest()
-    
-    
-    @bizclnt(state=State.Room, invoke="$",
-            desc="Switch comming message block")
-    def blockswitch(self, inputs=None, *args, **kwargs) -> BizRequest:
-        if self.chatblock:
-            self.chatblock = False
-            for cm in self.buffer:
-                print(cm.format())
-        else:
-            self.chatblock = True
-        return BizRequest()
-        
+            
         
     def start(self):
         def waituntilready():
             retrials = 0
-            while True:
+            while self.active:
                 retrials += 1
                 time.sleep(3)
                 if self.sessservice.ready and self.sessservice.tsservice.loop:
@@ -146,12 +131,16 @@ class Client(ClientBizService):
             super().start()
             waituntilready()
             self.connect()
-            while True:
+            while self.active:
                 a = input()
                 self.process_input(a)
         except Exception as e:
             print(e)
             self.close()
+            
+    def close(self, *args):
+        super().close(*args)
+        self.active = False
         
 def start_client(**kwargs):
     initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))
