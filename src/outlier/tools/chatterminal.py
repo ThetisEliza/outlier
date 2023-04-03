@@ -1,7 +1,7 @@
 import sys
 import os
 from typing import Tuple
-
+import signal
 
 class ChatTerminal:
     def __init__(self, log_file_name = None) -> None:
@@ -126,7 +126,7 @@ class ChatTerminal:
                 ot = self._output()
                 return ot
             elif instru == "interrupt":
-                raise KeyboardInterrupt()
+                os.kill(os.getpid(), signal.SIGINT)
             elif instru == "ignore":
                 ...
             elif instru == 'default':    
@@ -136,11 +136,11 @@ class ChatTerminal:
     def output(self, output: str) -> None:
         if len(self.buffer):
             sys.stdout.write("\r"+ " "*len("".join(self.buffer).encode()))
-            sys.stdout.write('\r'+output+"\n\r")
+            sys.stdout.write(f'\r{output}\n\r')
             sys.stdout.write("\r"+"".join(self.buffer))
             self._move_cursor(self.cursor_idx)
         else:
-            sys.stdout.write('\r'+output+"\n\r")
+            sys.stdout.write(f'\r{output}\n\r')
         sys.stdout.flush()
         
         

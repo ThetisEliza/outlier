@@ -153,11 +153,12 @@ class Client(ClientBizService):
             print(e)
             self.close()
         
-            
-            
-            
-
-
+def start_client(**kwargs):
+    initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))
+    ts = TcpConnectService(False, **kwargs)
+    ss = ConnectSessService(ts, **kwargs)
+    bs = Client(ss, **kwargs)
+    bs.start()
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
@@ -166,14 +167,8 @@ def main():
     argparse.add_argument("-i", "--ip",   required=True, type=str)
     argparse.add_argument("-p", "--port", required=False, type=int, default=8809)
     argparse.add_argument("-k", "--key",  required=False, type=str, default=RandomGen.getrandomvalue()[:6])
-        
     kwargs = vars(argparse.parse_args())
-    initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    
-    
-    ts = TcpConnectService(False, **kwargs)
-    ss = ConnectSessService(ts, **kwargs)
-    bs = Client(ss, **kwargs)
-    bs.start()  
+    start_client(**kwargs)
 
     
 if __name__ == '__main__':

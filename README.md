@@ -25,16 +25,16 @@ Install with pip
 pip install outlierchat
 ```
 
-## Quick tour
+## Quick Tour
 
 After setup. You can start a server just start the module outlier.server as
 ```shell
-python -m outlier.server [-i ip_addr] [-p port]
+python -m outlier -s [-i ip_addr] [-p port]
 ```
 
 Then you and your friends can easily connect to the server by
 ```shell
-python -m outlier.client -n name -i ip_addr [-p port]
+python -m outlier -n name -i ip_addr [-p port]
 ```
 
 After connected, it's easy to regard it as an online game system. The client firstly is 
