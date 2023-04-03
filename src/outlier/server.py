@@ -120,16 +120,7 @@ class Server(ServerBizService):
             return BizResponse('error')
         
 
-
-
-def main():
-    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
-    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
-    argparse.add_argument("-lh", "--loghandler", default=None, type=str)
-    argparse.add_argument("-i", "--ip",     required=False, type=str, default=gethostaddr())
-    argparse.add_argument("-p", "--port",   required=False, type=int, default=8809)
-        
-    kwargs = vars(argparse.parse_args())
+def start_server(**kwargs):
     initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))    
 
     logging.info(f"Check init parameters {kwargs}")
@@ -145,6 +136,17 @@ def main():
     
     logging.info(f"Server start")
     bs.start()
+
+
+def main():
+    argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")
+    argparse.add_argument("-l", "--log", default="INFO", type=str, choices=["DEBUG", "INFO", "ERROR", "debug", "info", "error"])
+    argparse.add_argument("-lh", "--loghandler", default=None, type=str)
+    argparse.add_argument("-i", "--ip",     required=False, type=str, default=gethostaddr())
+    argparse.add_argument("-p", "--port",   required=False, type=int, default=8809)
+    kwargs = vars(argparse.parse_args())
+    start_server(**kwargs)
+    
     
 if __name__ == '__main__':
     main()
