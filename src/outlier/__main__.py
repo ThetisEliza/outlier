@@ -10,7 +10,7 @@ def main():
     argparse.add_argument("-lh", "--loghandler", default=None, type=str)
     argparse.add_argument("-i", "--ip",     required=False, type=str, default=gethostaddr())
     argparse.add_argument("-p", "--port",   required=False, type=int, default=8809)
-    argparse.add_argument("-s", "--server", required=False, type=str, choices=['y', 'Y', 'n', 'N'], default='N')
+    argparse.add_argument("-s", "--server", action="store_true")
     
     clientargparse = ArgumentParser(prog="python -m outlier", parents=[argparse], conflict_handler="resolve", usage="python3 -m outlier")
     clientargparse.add_argument("-i", "--ip",     required=True, type=str)
@@ -18,7 +18,7 @@ def main():
     clientargparse.add_argument("-k", "--key",    required=False, type=str, default=RandomGen.getrandomvalue()[:6])
     
     kwargs = vars(argparse.parse_args())
-    if kwargs.get('server', 'N').lower() == 'y':
+    if kwargs.get('server'):
         start_server(**kwargs)
     else:
         kwargs = vars(clientargparse.parse_args())
