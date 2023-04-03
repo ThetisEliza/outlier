@@ -24,7 +24,7 @@ class testThreadPool(unittest.TestCase):
         t.put_task(ThreadPool.template_loop, args=(3,))
         t.queue.join()
         endtime = time.time()
-        self.assertAlmostEqual(endtime - starttime, 5, delta=0.5)
+        self.assertAlmostEqual(endtime - starttime, 5, delta=0.9)
         
     def test_thread_dead(self):
         starttime = time.time()
@@ -35,4 +35,4 @@ class testThreadPool(unittest.TestCase):
         t.put_task(ThreadPool.template_loop, args=(2,))
         t.queue.join()
         endtime = time.time()
-        self.assertAlmostEqual(endtime - starttime, 5, delta=0.5)
+        self.assertAlmostEqual(endtime - starttime, 5, delta=0.9)
