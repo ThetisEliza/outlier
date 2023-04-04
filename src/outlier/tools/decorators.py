@@ -6,17 +6,13 @@ FilePath: /outlier/src/outlier/tools/decorators.py
 '''
 import time
 from typing import Callable
-import os
 import logging
 
 def onexit(func: Callable):
     def wrapped_func(*args, **kwargs):
-        print("Exiting...")
         logging.debug(f"Exiting calling {func}")
         func(*args, **kwargs)
-        time.sleep(1)
-        print("Exited Bye")
-        os._exit(0)
+        time.sleep(0.3)
     return wrapped_func
 
 
