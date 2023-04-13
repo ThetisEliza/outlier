@@ -276,7 +276,7 @@ if sys.platform != 'win32':
             super().close()
             termios.tcsetattr(self.fd, termios.TCSADRAIN, self.settings)
             
-    terminal = PosixTerminal("tmp2.txt")
+    terminal = PosixTerminal()
             
 else:
     import msvcrt
