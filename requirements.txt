@@ -6,3 +6,6 @@ twine
 # Encryption libs
 pyDes
 rsa
+
+# terminal required
+wcwidth

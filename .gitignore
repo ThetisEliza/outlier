@@ -11,7 +11,7 @@ build
 
 # project tmp files
 log
-tmp
+tmp*
 nohup*
 
 # project fix files

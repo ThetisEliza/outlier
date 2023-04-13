@@ -43,19 +43,18 @@ import inspect
 import logging
 import re
 import signal
-import sys
-import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List
 
 from ..encryption.sessionservice import Package, Session, SessionService
-from ..tools.chatterminal import ct
+from ..tools.chatterminal import terminal
 from ..tools.events import Ops
+from ..tools.decorators import onexit
 
-if ct.valid:
-    print = ct.output
-    input = ct.input
+if terminal.valid:
+    print = terminal.output
+    input = terminal.input
 
 class State(Enum):
     IDLE = -1
@@ -80,7 +79,7 @@ class BizRequest:
 @dataclass
 class BizResponse:
     resp: Any   = None
-    bcresp: Any = None
+    bcresp: Any = None                                                                                                                  
     ts: float   = None
     cmd: str    = None
     group: int  = -1
@@ -125,8 +124,11 @@ class BizService:
                 return func
         return lambda *args:  BizResponse("NA")
     
+    @onexit
     def close(self, *args):
         self.sessservice.close(*args)
+        print("biz exit") 
+        terminal.close()
     
     def start(self):
         self.sessservice.start()

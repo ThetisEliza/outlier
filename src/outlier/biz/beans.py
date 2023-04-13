@@ -47,7 +47,7 @@ class ChatMessage:
             return "just now"
     
     def format(self):
-        return f"{self.name} -- {ChatMessage.get_round_time(self.ts)}: {self.content}\n"
+        return f"{self.name}\t-- {ChatMessage.get_round_time(self.ts)}:\t{self.content}\n"
     
 
 class Room:
