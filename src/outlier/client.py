@@ -7,13 +7,13 @@ from .biz.beans import ChatMessage
 from .biz.bizservice import BizRequest, ClientBizService, State, bizclnt
 from .encryption.sessionservice import ConnectSessService, SessionService
 from .server import Server
-from .tools.chatterminal import ct
+from .tools.chatterminal import terminal
 from .tools.utils import RandomGen, initlogger
 from .transmission.tcpservice import TcpConnectService
 
-if ct.valid:
-    print = ct.output
-    input = ct.input
+if terminal.valid:
+    print = terminal.output
+    input = terminal.input
 
 class Client(ClientBizService):
     def __init__(self, sessservice: SessionService, **kwargs) -> None:
@@ -29,11 +29,9 @@ class Client(ClientBizService):
         cm = package.get_field('param')
         cm = ChatMessage.parse(cm)
         self.buffer.append(cm)
-        ct.outputspecchar(b"\x1b[2J")
-        ct.outputspecchar(b'\x1b[H')
-        for a in self.buffer:
-            # ct.outputspecchar(b'\x15')
-            print(a.format())
+        terminal.refresh_lines(*[a.format() for a in self.buffer])
+        # for a in self.buffer:
+        #     print(a.format())
     
     def connected(self, package):
         self.atstate = State.Hall

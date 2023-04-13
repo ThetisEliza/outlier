@@ -2,10 +2,10 @@ import os
 import signal
 import sys
 from typing import Tuple, List
-from decorators import singleton
 from wcwidth import wcswidth
+from multiprocessing import Process
 
-@singleton
+
 class Terminal:
     def __init__(self, log_file_name = None) -> None:
         self.buffer: List[str] = []
@@ -20,13 +20,27 @@ class Terminal:
         ...
         
     def _up(self):
-        # os.write(self.fd, b'\x1b[A')
-        ... 
+        if 0 <= self.his_idx - 1 < len(self.history):
+            self.his_idx -= 1
+            self.buffer.clear()
+            self.buffer.extend(list(self.history[self.his_idx]))
+            self.rewrite_line(f'\r{self.prompt}' +''.join(self.buffer))
+            self.cursor_idx = len(self.buffer)
+            sys.stdout.flush()
         
     def _down(self):
-        # os.write(self.fd, b'\x1b[B')
-        ...
+        self.buffer.clear()
+        if 0 < self.his_idx + 1 < len(self.history):
+            self.his_idx += 1
+            self.buffer.extend(self.history[self.his_idx])
+        elif self.his_idx + 1 == len(self.history):
+            self.his_idx += 1
+            self.buffer.extend([])
         
+        self.rewrite_line(f'\r{self.prompt}' + ''.join(self.buffer))
+        self.cursor_idx = len(self.buffer)
+        sys.stdout.flush()
+            
     def _get_len(self, a: str):
         return wcswidth(a)
         
@@ -43,6 +57,11 @@ class Terminal:
             self.cursor_idx += 1
             for _ in range(right_len):
                 os.write(self.fd, b'\x1b[C')
+                
+    def _reset_cursor_after_full_output(self):
+        shift_len = self._get_len("".join(self.buffer[self.cursor_idx:]))
+        self._write_spec_char(b'\x1b[D', shift_len)
+        # self.cursor_idx = 0
         
     def _home(self):
         shift_len = self._get_len("".join(self.buffer[:self.cursor_idx]))
@@ -61,8 +80,6 @@ class Terminal:
         os.write(self.fd, "".join(self.buffer[self.cursor_idx:]).encode())
         shift_len = self._get_len("".join(self.buffer[self.cursor_idx:]))
         self._write_spec_char(b'\x1b[D', shift_len)
-        
-        
         
     def _delete(self) -> None:
         if 0 <= self.cursor_idx < len(self.buffer):
@@ -83,7 +100,6 @@ class Terminal:
             self._write_spec_char(b'\x1b[D', shift_len)
             self.cursor_idx -= 1
         
-        
     def _write_spec_char(self, char: bytes, times: int = 1) -> None:
         if times > 0:
             for _ in range(times):
@@ -99,17 +115,28 @@ class Terminal:
         return "default"
     
     def _input_confirm(self) -> str:
-        return ""
+        self.cursor_idx = 0
+        outputstr = "".join(self.buffer)
+        # self.rewrite_line(f"\r{outputstr}")
+        self.buffer.clear()
+        sys.stdout.write('\r\n')
+        if len(outputstr):
+            self.history.append(outputstr)
+            self.his_idx = len(self.history)
+        sys.stdout.flush()
+        self._write_to(f"Check history {self.history}")
+        return outputstr
     
     
-    def input(self, prompt = ">>> ") -> str:
-        os.write(self.fd, prompt.encode())
+    def input(self, prompt = ">>> "):
+        self.rewrite_line('\r')
+        self.rewrite_line(prompt)
+        self.prompt = prompt
         while self.active:
             a, b = self._readkey()
             instru = self._parse_bytes(b)
-            
             self._write_to(f"check inputting msg {a} {b} {instru}\n")
-            
+
             if instru == "backspace":
                 self._delete_former()
             elif instru == "delete":
@@ -135,17 +162,47 @@ class Terminal:
             elif instru == 'default':    
                 self._insert(a)
                 
-            self._write_buffer_details()
+            self._write_buffer_details()        
             
     def output(self, output: str) -> None:
-        ...
+        output = str(output)
+        output = output.replace('\n', '\r\n')
+        sys.stdout.write('\r')
+        self.rewrite_line(output)
+        sys.stdout.write('\r\n')
+        
+        self.rewrite_line(self.prompt)
+        sys.stdout.flush()
+        
+        if len(self.buffer):
+            sys.stdout.write("".join(self.buffer))
+            sys.stdout.flush()
+            self._reset_cursor_after_full_output()
+            pre_cursor_idx = self.cursor_idx
+            self._home()
+            for _ in range(pre_cursor_idx):
+                self._right()
+        sys.stdout.flush()
+        self._write_buffer_details()
+        
+        
         
     def rewrite_line(self, line: str) -> None:
         os.write(self.fd, b'\x1b[2K')
-        os.write(line)
+        os.write(self.fd, line.encode())
         
-    def rewrite_all(self, *lines: str) -> None:
-        ...
+        
+    def rewrite_lines(self, *lines: str) -> None:
+        lines_all = []
+        for l in lines:
+            lines_all.extend(l.split("\n"))
+        for l in lines_all:
+            self.rewrite_line(f"\r{l}\n")
+            
+    def refresh_lines(self, *lines: str) -> None:
+        self._write_spec_char(b'\x1b[2J')
+        self.rewrite_lines(*lines)
+        self.output("")
         
     def rewrite_rightside(self, line: str) -> None:
         ...
@@ -162,7 +219,7 @@ if sys.platform != 'win32':
     import termios
     import tty
     
-    @singleton
+    # @singleton
     class PosixTerminal(Terminal):
         def __init__(self, log_file_name=None) -> None:
             super().__init__(log_file_name)
@@ -252,7 +309,36 @@ else:
             if b[:-1] == b'\xc3\xa0':   return 'ignore'
             return super()._parse_bytes(b)
         
-    terminal = WinTerminal("tmp2.txt")
+    terminal = WinTerminal()
+    
+    
+# import asyncio
+# import random
+# import time 
 
+# async def request(req: str) -> str:
+#     await asyncio.sleep(1)
+#     # print(f"resp from async {req}")
+#     return f"resp from async {req}"
 
-terminal.input()    
+# def randommesssage() -> None:
+#     while True:
+#         time.sleep(random.random()*5)
+#         terminal.output(f"random message {random.random()}")
+        
+    
+# async def client():
+#     # asyncio.to_thread(randommesssage)
+#     while True:
+#         c = terminal.input("$ ")
+#         if len(c):
+#             r = await request(c)
+#             terminal.output(r)
+
+# from threading import Thread
+
+# a = Thread(target=randommesssage)
+# a.daemon = True
+# a.start()
+
+# asyncio.get_event_loop().run_until_complete(client())

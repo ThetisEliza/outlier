@@ -1,16 +1,12 @@
+'''
+Date: 2023-03-12 19:43:45
+LastEditors: ThetisEliza wxf199601@gmail.com
+LastEditTime: 2023-03-12 20:12:30
+FilePath: /outlier/src/outlier/biz/events.py
+'''
 from enum import Enum
-from dataclasses import dataclass
 
 class Ops(Enum):
-    ADD = 0
-    RMV = 1
-    RCV = 2
-
-
-class Event:
-    def __init__(self) -> None:
-        self.op:  Ops = None
-        self.fd:  int = -1
-        self.ts:  float = -1
-        
-    
+    Add = 0
+    Rmv = 1
+    Rcv = 2

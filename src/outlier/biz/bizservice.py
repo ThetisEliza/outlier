@@ -48,13 +48,13 @@ from enum import Enum
 from typing import Any, Callable, Dict, List
 
 from ..encryption.sessionservice import Package, Session, SessionService
-from ..tools.chatterminal import ct
+from ..tools.chatterminal import terminal
 from ..tools.events import Ops
 from ..tools.decorators import onexit
 
-if ct.valid:
-    print = ct.output
-    input = ct.input
+if terminal.valid:
+    print = terminal.output
+    input = terminal.input
 
 class State(Enum):
     IDLE = -1
@@ -128,7 +128,7 @@ class BizService:
     def close(self, *args):
         self.sessservice.close(*args)
         print("biz exit") 
-        ct.close()
+        terminal.close()
     
     def start(self):
         self.sessservice.start()
