@@ -42,3 +42,6 @@
 
 4.03
 - I overwrite a terminal for client and make it avoid being interrupted by comming message.
+
+4.12
+- Maybe I've spend too much time on the termial? But who makes this modern terminal so stubborn and become totally a tool for line-style input and output.
