@@ -1,9 +1,9 @@
 import os
 import signal
 import sys
+import atexit
 from typing import Tuple, List
 from wcwidth import wcswidth
-from multiprocessing import Process
 
 
 class Terminal:
@@ -15,6 +15,7 @@ class Terminal:
         self.active = True
         self.f = open(log_file_name, 'w') if log_file_name else None
         self.fd = sys.stdout.fileno()
+        self.prompt = ""
 
     def _readkey(self) -> Tuple[bytes, bytes]:
         ...
@@ -106,7 +107,7 @@ class Terminal:
                 os.write(self.fd, char)
         
     def _write_to(self, msg: str):
-        if self.f: os.write(self.f.fileno(), f"{msg}\n".encode())
+        if self.f and not self.f.closed: os.write(self.f.fileno(), f"{msg}\n".encode())
         
     def _write_buffer_details(self):
         self._write_to(f"{self.buffer}, {self.buffer}, {self.cursor_idx}")
@@ -117,7 +118,7 @@ class Terminal:
     def _input_confirm(self) -> str:
         self.cursor_idx = 0
         outputstr = "".join(self.buffer)
-        # self.rewrite_line(f"\r{outputstr}")
+        self.rewrite_line(f"\r")
         self.buffer.clear()
         sys.stdout.write('\r\n')
         if len(outputstr):
@@ -157,6 +158,8 @@ class Terminal:
                 return self._input_confirm()
             elif instru == "interrupt":
                 os.kill(os.getpid(), signal.SIGINT)
+            elif instru == "stop":
+                os.kill(os.getpid(), signal.SIGTSTP)
             elif instru == "ignore":
                 ...
             elif instru == 'default':    
@@ -164,14 +167,15 @@ class Terminal:
                 
             self._write_buffer_details()        
             
-    def output(self, output: str) -> None:
+    def output(self, output: str, np = False) -> None:
         output = str(output)
         output = output.replace('\n', '\r\n')
+        
         sys.stdout.write('\r')
         self.rewrite_line(output)
         sys.stdout.write('\r\n')
-        
-        self.rewrite_line(self.prompt)
+        if not np:
+            self.rewrite_line(self.prompt)
         sys.stdout.flush()
         
         if len(self.buffer):
@@ -184,8 +188,6 @@ class Terminal:
                 self._right()
         sys.stdout.flush()
         self._write_buffer_details()
-        
-        
         
     def rewrite_line(self, line: str) -> None:
         os.write(self.fd, b'\x1b[2K')
@@ -269,6 +271,7 @@ if sys.platform != 'win32':
             if b == b'\x1b[H':      return 'home'
             if b == b'\x1b[F':      return 'end'
             if b == b'\x03':        return "interrupt"
+            if b == b'\x1a':        return "stop"
             if b[:2] == b'\x1b[':   return 'ignore'
             return super()._parse_bytes(b)
         
@@ -306,39 +309,12 @@ else:
             if b == b'\xc3\xa0G':       return 'home'
             if b == b'\xc3\xa0O':       return 'end'
             if b == b'\x03':            return "interrupt"
+            if b == b'\x03':        return "stop"
             if b[:-1] == b'\xc3\xa0':   return 'ignore'
             return super()._parse_bytes(b)
         
     terminal = WinTerminal()
     
-    
-# import asyncio
-# import random
-# import time 
-
-# async def request(req: str) -> str:
-#     await asyncio.sleep(1)
-#     # print(f"resp from async {req}")
-#     return f"resp from async {req}"
-
-# def randommesssage() -> None:
-#     while True:
-#         time.sleep(random.random()*5)
-#         terminal.output(f"random message {random.random()}")
-        
-    
-# async def client():
-#     # asyncio.to_thread(randommesssage)
-#     while True:
-#         c = terminal.input("$ ")
-#         if len(c):
-#             r = await request(c)
-#             terminal.output(r)
-
-# from threading import Thread
-
-# a = Thread(target=randommesssage)
-# a.daemon = True
-# a.start()
-
-# asyncio.get_event_loop().run_until_complete(client())
+@atexit.register
+def close():
+    terminal.close()

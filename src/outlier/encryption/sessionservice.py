@@ -6,9 +6,11 @@ FilePath: /outlier/src/outlier/encryption/sessionservice.py
 
 This module is to encrypt and decrypt tcp byteflow and provide better interfaces for business layer
 '''
+import asyncio
 import logging
 import time
 from dataclasses import dataclass
+from traceback import print_exc
 from typing import Any, Dict
 
 from rsa.pkcs1 import DecryptionError
@@ -41,6 +43,7 @@ class SessionService:
         self.tsservice.set_upper_rchandle(self.rchandle)
         self.upper_rchandle = lambda *args: ...
         self.kwargs = kwargs
+        self.ready  = False
         
     def set_upper_rchandle(self, upper_rchandle):
         self.upper_rchandle = upper_rchandle
@@ -54,6 +57,7 @@ class SessionService:
             key (_type_, optional): _description_. Defaults to None.
         """
         try:
+            logging.debug(f"[Sess layer]\tsending {session.conn.addr}, {package}")
             byteflow = self._convert_package_to_byteflow(package, cls, key)
             self.tsservice.send(byteflow, session.conn)
         except OSError as e:
@@ -74,6 +78,9 @@ class SessionService:
     
     def start(self):
         self.tsservice.startloop()
+        
+    def is_alive(self):
+        return self.ready
     
     @onexit
     def close(self, *args):
@@ -197,11 +204,25 @@ class ConnectSessService(SessionService):
         self.session    = Session(service.conn)
         self.session.state = 1
         self.key: bytes = kwargs.get("key", RandomGen.getrandomvalue()[:6]).encode()
-        self.ready      = False
         
-    def start(self):
-        super().start()
     
+    def start(self):    
+        super().start()
+        max_retrials    = 5
+        retrials        = 0
+        while not self.is_alive():
+            time.sleep(1)
+            if self.is_alive():
+                break
+            
+            if not self.tsservice.is_alive():
+                self.close()
+                break
+            print(f"Waiting for channel built {retrials} / {max_retrials}")
+            retrials += 1
+            if retrials > max_retrials:
+                self.close()
+                break
         
     def send(self, package: Package, session: Session = None):
         session = session if session is not None else self.session
@@ -215,7 +236,7 @@ class ConnectSessService(SessionService):
         # 1. parse public key
         # 2. parse confirming secrete key and set secrete key
         # 3. user biz communication
-        if byteflow is not None:
+        if byteflow is not None:    
             package = self._channel_state_convert(self.session, byteflow, ops)
             self.upper_rchandle(ops, self.session, package, *args)
         
@@ -244,8 +265,13 @@ class ConnectSessService(SessionService):
         """
         try:
             package = self._convert_byteflow_to_package(byteflow)
+            if not self.tsservice.loop:
+                raise BuildChannelException("tcp service closed")
+            
+            
             if package.get_field('session_state') == -1:
                 raise BuildChannelException("server confirming failded")
+            
                 
             if session.state == 1:
                 # reveive secret
@@ -272,19 +298,16 @@ class ConnectSessService(SessionService):
                     print(f"Server confirmed your key\n")
                     session.state = 5
                     self.ready = True
-                    time.sleep(1)
                     print(f"Channel built\n")
                 else:
                     raise BuildChannelException("no `session_confirm` found")
             elif session.state == 5:
                 return self._convert_byteflow_to_package(byteflow, DES, session.secret)
-        except (Exception, ValueError) as e:
-            from traceback import print_exc
-            logging.debug(f"[Sess layer]\tbuild channel failed at {print_exc()} retrying")
+        except (Exception, ValueError, BuildChannelException) as e:
             session.state = 1
             session.secret = None
             session.retry += 1
-            print("--- retry ---")
+            print("Channel build retries")
             if session.retry >= 5:
                 self.close()
             else:

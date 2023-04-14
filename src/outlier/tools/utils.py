@@ -11,7 +11,7 @@ import socket
 from logging import handlers
 from datetime import datetime
 
-FORMAT = '%(asctime)s - %(message)s'
+FORMAT = '%(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s\r'
 
 
 
