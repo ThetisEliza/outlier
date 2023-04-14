@@ -3,7 +3,6 @@ import signal
 import sys
 from typing import Tuple, List
 from wcwidth import wcswidth
-from multiprocessing import Process
 
 
 class Terminal:

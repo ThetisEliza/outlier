@@ -54,6 +54,7 @@ class SessionService:
             key (_type_, optional): _description_. Defaults to None.
         """
         try:
+            logging.debug(f"[Sess layer]\tsending {session.conn.addr}, {package}")
             byteflow = self._convert_package_to_byteflow(package, cls, key)
             self.tsservice.send(byteflow, session.conn)
         except OSError as e:

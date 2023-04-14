@@ -51,9 +51,12 @@ class TcpService:
             byteflow (bytes): data
             conn (Connection, optional): connection.
         """
-        if conn:
+        
+        if conn and conn.sock.fileno() > 0:
             logging.debug(f"[Tcp layer]\tsending {conn.addr}, {byteflow}")
             conn.sock.send(byteflow)
+        else:
+            logging.debug(f"[Tcp layer]\ttarget connection closed, abort sending.")
             
         
     def set_upper_rchandle(self, upper_rchandle: Callable[[Ops, Connection, bytes, Any], Any]):

@@ -190,6 +190,7 @@ class ServerBizService(BizService):
         
     def send(self, user:User, bizresp: BizResponse):
         pack, bc = self._pack_resp(bizresp)
+        logging.debug(f"[Biz layer]\tsending {user.name}, {bizresp}, bc {bc}")
         if not bizresp.inc:
             self.sessservice.send(pack, user.sess)
         if bc:
