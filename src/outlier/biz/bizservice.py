@@ -127,7 +127,6 @@ class BizService:
     @onexit
     def close(self, *args):
         self.sessservice.close(*args)
-        print("biz exit") 
         terminal.close()
     
     def start(self):
