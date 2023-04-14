@@ -11,7 +11,7 @@ with open("README.md", encoding="utf8") as f:
     
 setuptools.setup(
     name="outlierchat",
-    version="0.0.24",
+    version="0.0.25",
     author="Thetis",
     author_email="736396627@qq.com",
     description="A simple server to build a secret channel for chat.",

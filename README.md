@@ -27,7 +27,7 @@ pip install outlierchat
 
 ## Quick Tour
 
-After setup. You can start a server just start the module outlier.server as
+After setup. You can start a server just start the module outlier as
 ```shell
 python -m outlier -s [-i ip_addr] [-p port]
 ```
