@@ -7,6 +7,7 @@ FilePath: /outlier/src/outlier/encryption/protocol.py
 '''
 
 import base64
+import binascii
 import hashlib
 import json
 from datetime import datetime
@@ -133,7 +134,7 @@ class Package:
             data = cls.decrypt(byteflow, key).decode()
             data = json.loads(data)
             return Package(**data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        except (json.JSONDecodeError, UnicodeDecodeError, binascii.Error) as e:
             return Package()
     
     @staticmethod

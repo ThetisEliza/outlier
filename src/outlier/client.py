@@ -1,4 +1,3 @@
-import sys
 import time
 from argparse import ArgumentParser
 from typing import List
@@ -8,6 +7,7 @@ from .biz.bizservice import BizRequest, ClientBizService, State, bizclnt
 from .encryption.sessionservice import ConnectSessService, SessionService
 from .server import Server
 from .tools.chatterminal import terminal
+from .tools.decorators import onexit
 from .tools.utils import RandomGen, initlogger
 from .transmission.tcpservice import TcpConnectService
 
@@ -30,15 +30,14 @@ class Client(ClientBizService):
         cm = ChatMessage.parse(cm)
         self.buffer.append(cm)
         terminal.refresh_lines(*[a.format() for a in self.buffer])
-        # for a in self.buffer:
-        #     print(a.format())
     
     def connected(self, package):
         self.atstate = State.Hall
         self.show_msg(package)
         
     def process_input(self, inputs: str):
-        super().process_input(inputs)
+        if inputs is not None:
+            super().process_input(inputs)
     
     @bizclnt(state=State.IDLE, bindto=Server.connectuser, recall=connected)
     def connect(self, inputs=None, *args, **kwargs) -> BizRequest:
@@ -50,15 +49,11 @@ class Client(ClientBizService):
         from datetime import datetime
         cm = ChatMessage(self.name, datetime.now().timestamp(), inputs)
         return BizRequest(param=cm.getattrs())
-    
-    
-    
+        
     @bizclnt(state=State.Hall, invoke="$info", bindto=Server.infohall, recall=show_msg, 
              desc="To glance at the details of the server and client configuartions")
     def info(self, inputs=None, *args, **kwargs) -> BizRequest:
         return BizRequest()
-    
-    
     
     @bizclnt(state=State.Hall, invoke="$exit", 
              desc="To disconnect with the server")
@@ -107,38 +102,29 @@ class Client(ClientBizService):
     @bizclnt(state=State.Room, invoke="$clear",
             desc="To clear the terminal")
     def clear(self, inputs=None, *args, **kwargs) -> BizRequest:
-        import subprocess
-        subprocess.call('reset')
+        terminal.refresh_lines("")
         return BizRequest()
             
         
     def start(self):
-        def waituntilready():
-            retrials = 0
-            while self.active:
-                retrials += 1
-                time.sleep(3)
-                if self.sessservice.ready and self.sessservice.tsservice.loop:
-                    break
-                print(f"Waiting for channel ready for {retrials * 5} / {5 * 5} secs")
-                if retrials > 4:
-                    raise Exception("channel build failed")
-            retrials = 0
-            
         try:
             super().start()
-            waituntilready()
+            if not self.sessservice.is_alive():
+                raise Exception("Channel built failed.")
             self.connect()
+            time.sleep(1)
             while self.active:
                 a = input()
                 self.process_input(a)
         except Exception as e:
             print(e)
             self.close()
-            
+    @onexit                
     def close(self, *args):
+        print("Closing...", True)
         super().close(*args)
         self.active = False
+        print("Closed Bye", True)
         
 def start_client(**kwargs):
     initlogger(kwargs.get('log').upper(), filehandlename=kwargs.get('loghandler'))
@@ -146,6 +132,7 @@ def start_client(**kwargs):
     ss = ConnectSessService(ts, **kwargs)
     bs = Client(ss, **kwargs)
     bs.start()
+    
 
 def main():
     argparse = ArgumentParser(prog="Chat room", description="This is a chat room for your mates")

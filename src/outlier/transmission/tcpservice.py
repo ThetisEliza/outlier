@@ -8,15 +8,16 @@ This module is to provide stable and reliable layer communication as tcp protoco
 '''
 
 import logging
+import os
+import signal
 import select
 import socket
-import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Dict
 
-from ..tools.events import Ops
 from ..tools.decorators import onexit, singleton
+from ..tools.events import Ops
 from ..tools.threadpool import ThreadPool
 
 
@@ -91,6 +92,9 @@ class TcpService:
             self._loop()
         else:
             self.threadpool.put_task(self._loop)
+            
+    def is_alive(self):
+        return self.loop
         
     @onexit
     def close(self, *args):
@@ -202,12 +206,12 @@ class TcpConnectService(TcpService):
         try:
             ip, port = self.kwargs.get('ip'), self.kwargs.get('port')
             self.sock.connect((ip, port))
+            self.conn.addr = self.sock.getsockname()
         except (ConnectionRefusedError, socket.gaierror) as e:
-            print(f"Connecting to server {ip}:{port} failed, please check your ip and port carefully.")
+            print(f"Connecting to server {ip}:{port} failed, please check your ip and port carefully.\r")
             self.close()
         # self.epctl.register(self.sock, select.EPOLLIN)  
         self.rlist.append(self.sock.fileno())     
-        self.conn.addr = self.sock.getsockname()
         while self.loop:
             # events = self.epctl.poll()
             rl, _, _ = select.select(self.rlist, [], [], 0.1)
@@ -220,8 +224,9 @@ class TcpConnectService(TcpService):
                         self.threadpool.put_task(self._rchandle, args=(Ops.Rcv, self.conn, fd, byteflow))
                     except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError, ConnectionRefusedError):
                         logging.debug("[Tcp layer]\tserver failed")
-                        print(f"Server failed")
+                        print(f"Server failed\r")
                         self.close()
+                        os.kill(os.getpid(), signal.SIGINT)
                         
 
     def _rchandle(self, ops: Ops, conn: Connection, fd: int = -1, byteflow: bytes = None, *args):
